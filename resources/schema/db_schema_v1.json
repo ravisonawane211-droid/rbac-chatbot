@@ -1,0 +1,154 @@
+{
+  "schema": [
+    {
+      "table_name": "locations",
+      "description": "This tables contain information of  FinSolve Technologies different office location details",
+      "columns": [
+        {
+          "name": "location_id",
+          "description": "Unique identifier for a location",
+          "column_type": "INT",
+          "constraint": "PRIMARY KEY",
+          "example": 1
+        },
+        {
+          "name": "country",
+          "description": "Country where the office is located",
+          "column_type": "VARCHAR(100)",
+          "constraint": "NOT NULL",
+          "example": "United States"
+        },
+        {
+          "name": "city",
+          "description": "City where the office is located",
+          "column_type": "VARCHAR(100)",
+          "constraint": "NOT NULL",
+          "example": "San Francisco"
+        },
+        {
+          "name": "cost_index",
+          "description": "Cost of living index for the location",
+          "column_type": "NUMERIC(5,2)",
+          "constraint": "NOT NULL",
+          "example": 1.35
+        }
+      ],
+      "joins": []
+    },
+    {
+      "table_name": "employees",
+      "description": "This tables contain information of FinSolve Technologies employees details",
+      "columns": [
+        {
+          "name": "employee_id",
+          "description": "Unique identifier for each employee",
+          "column_type": "VARCHAR(20)",
+          "constraint": "PRIMARY KEY",
+          "example": "FINEMP1000"
+        },
+        {
+          "name": "full_name",
+          "description": "Full name of the employee",
+          "column_type": "VARCHAR(150)",
+          "constraint": "NOT NULL",
+          "example": "Aadhya Patel"
+        },
+        {
+          "name": "role",
+          "description": "Job role or designation of the employee",
+          "column_type": "VARCHAR(100)",
+          "constraint": "NOT NULL",
+          "example": "Sales Manager"
+        },
+        {
+          "name": "department",
+          "description": "Department where the employee works",
+          "column_type": "VARCHAR(100)",
+          "constraint": "NOT NULL",
+          "example": "Sales"
+        },
+        {
+          "name": "email",
+          "description": "Official email address of the employee",
+          "column_type": "VARCHAR(150)",
+          "constraint": "UNIQUE",
+          "example": "aadhya.patel@fintechco.com"
+        },
+        {
+          "name": "location_id",
+          "description": "Reference to employee work location",
+          "column_type": "INT",
+          "constraint": "FOREIGN KEY REFERENCES locations(location_id)",
+          "example": 1
+        },
+        {
+          "name": "date_of_birth",
+          "description": "Date of birth of the employee",
+          "column_type": "DATE",
+          "constraint": "NOT NULL",
+          "example": "1991-04-03"
+        },
+        {
+          "name": "date_of_joining",
+          "description": "Date when the employee joined the organization",
+          "column_type": "DATE",
+          "constraint": "NOT NULL",
+          "example": "2018-11-20"
+        },
+        {
+          "name": "manager_id",
+          "description": "Employee ID of the reporting manager",
+          "column_type": "VARCHAR(20)",
+          "constraint": "FOREIGN KEY REFERENCES employees(employee_id)",
+          "example": "FINEMP1006"
+        },
+        {
+          "name": "salary",
+          "description": "Annual salary of the employee",
+          "column_type": "NUMERIC(12,2)",
+          "constraint": "NOT NULL",
+          "example": 1332478.37
+        },
+        {
+          "name": "leave_balance",
+          "description": "Remaining leave balance for the employee",
+          "column_type": "INT",
+          "constraint": "DEFAULT 0",
+          "example": 22
+        },
+        {
+          "name": "leaves_taken",
+          "description": "Total leaves taken by the employee",
+          "column_type": "INT",
+          "constraint": "DEFAULT 0",
+          "example": 11
+        },
+        {
+          "name": "attendance_pct",
+          "description": "Attendance percentage of the employee",
+          "column_type": "NUMERIC(5,2)",
+          "constraint": "NULL",
+          "example": 99.31
+        },
+        {
+          "name": "performance_rating",
+          "description": "Performance rating score of the employee",
+          "column_type": "INT",
+          "constraint": "CHECK (performance_rating BETWEEN 1 AND 5)",
+          "example": 3
+        },
+        {
+          "name": "last_review_date",
+          "description": "Date of last performance review",
+          "column_type": "TIMESTAMP",
+          "constraint": "NULL",
+          "example": "2024-05-21"
+        }
+      ],
+      "joins": [
+        "employees.location_id = locations.location_id",
+        "employees.manager_id = employees.employee_id (self join hierarchy)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "schema": [
+    {
+      "table_name": "locations",
+      "description": "Office location details for the Fin Solve Technologies",
+      "columns": [
+        { "name": "location_id", "description": "Unique identifier for a location", "column_type": "INT", "constraint": "PRIMARY KEY", "example": 1 },
+        { "name": "country", "description": "Country where the office is located", "column_type": "VARCHAR(100)", "constraint": "NOT NULL", "example": "United States" },
+        { "name": "city", "description": "City where the office is located", "column_type": "VARCHAR(100)", "constraint": "NOT NULL", "example": "San Francisco" },
+        { "name": "cost_index", "description": "Cost of living index", "column_type": "NUMERIC(5,2)", "constraint": "NOT NULL", "example": 1.35 }
+      ],
+      "joins": []
+    },
+    {
+      "table_name": "departments",
+      "description": "Master table for departments in Fin Solve Technologies",
+      "columns": [
+        { "name": "department_id", "description": "Unique department identifier", "column_type": "SERIAL", "constraint": "PRIMARY KEY", "example": 1 },
+        { "name": "department_name", "description": "Department name", "column_type": "VARCHAR(100)", "constraint": "UNIQUE NOT NULL", "example": "Sales" },
+        { "name": "department_code", "description": "Short department code", "column_type": "VARCHAR(20)", "constraint": "NULL", "example": "SAL" },
+        { "name": "description", "description": "Department description", "column_type": "TEXT", "constraint": "NULL", "example": "Sales and marketing" },
+        { "name": "is_active", "description": "Department active flag", "column_type": "BOOLEAN", "constraint": "DEFAULT TRUE", "example": true },
+        { "name": "created_at", "description": "Created timestamp", "column_type": "TIMESTAMP", "constraint": "DEFAULT CURRENT_TIMESTAMP", "example": "2024-01-01 10:00:00" }
+      ],
+      "joins": []
+    },
+    {
+      "table_name": "employee",
+      "description": "Core employee identity, organization and location mapping in Fin Solve Technologies",
+      "columns": [
+        { "name": "employee_id", "description": "Unique employee identifier", "column_type": "VARCHAR(20)", "constraint": "PRIMARY KEY", "example": "FINEMP1000" },
+        { "name": "full_name", "description": "Employee full name", "column_type": "VARCHAR(150)", "constraint": "NOT NULL", "example": "Aadhya Patel" },
+        { "name": "email", "description": "Employee email", "column_type": "VARCHAR(150)", "constraint": "UNIQUE", "example": "aadhya.patel@fintechco.com" },
+        { "name": "role", "description": "Employee role or designation", "column_type": "VARCHAR(100)", "constraint": "NOT NULL", "example": "Sales Manager" },
+        { "name": "department_id", "description": "Department reference", "column_type": "INT", "constraint": "FOREIGN KEY REFERENCES departments(department_id)", "example": 1 },
+        { "name": "location_id", "description": "Office location reference", "column_type": "INT", "constraint": "FOREIGN KEY REFERENCES locations(location_id)", "example": 1 },
+        { "name": "manager_id", "description": "Reporting manager id", "column_type": "VARCHAR(20)", "constraint": "FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1006" },
+        { "name": "date_of_joining", "description": "Joining date", "column_type": "DATE", "constraint": "NOT NULL", "example": "2018-11-20" },
+        { "name": "created_at", "description": "Record creation time", "column_type": "TIMESTAMP", "constraint": "DEFAULT CURRENT_TIMESTAMP", "example": "2024-01-01 10:00:00" }
+      ],
+      "joins": [
+        "employee.department_id = departments.department_id",
+        "employee.location_id = locations.location_id",
+        "employee.manager_id = employee.employee_id"
+      ]
+    },
+    {
+      "table_name": "employee_compensation",
+      "description": "Employee salary and compensation details in Fin Solve Technologies",
+      "columns": [
+        { "name": "employee_id", "description": "Employee reference", "column_type": "VARCHAR(20)", "constraint": "PRIMARY KEY, FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1000" },
+        { "name": "salary", "description": "Annual salary", "column_type": "NUMERIC(12,2)", "constraint": "NOT NULL", "example": 1332478.37 },
+        { "name": "last_updated", "description": "Last update timestamp", "column_type": "TIMESTAMP", "constraint": "DEFAULT CURRENT_TIMESTAMP", "example": "2024-05-21 10:00:00" }
+      ],
+      "joins": [
+        "employee_compensation.employee_id = employee.employee_id"
+      ]
+    },
+    {
+      "table_name": "employee_leave",
+      "description": "Employee leave balances and usage in Fin Solve Technologies",
+      "columns": [
+        { "name": "employee_id", "description": "Employee reference", "column_type": "VARCHAR(20)", "constraint": "PRIMARY KEY, FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1000" },
+        { "name": "leave_balance", "description": "Remaining leave balance", "column_type": "INT", "constraint": "DEFAULT 0", "example": 22 },
+        { "name": "leaves_taken", "description": "Leaves already taken", "column_type": "INT", "constraint": "DEFAULT 0", "example": 11 },
+        { "name": "last_updated", "description": "Last updated timestamp", "column_type": "TIMESTAMP", "constraint": "DEFAULT CURRENT_TIMESTAMP", "example": "2024-05-21 10:00:00" }
+      ],
+      "joins": [
+        "employee_leave.employee_id = employee.employee_id"
+      ]
+    },
+    {
+      "table_name": "employee_attendance",
+      "description": "Employee attendance metrics in Fin Solve Technologies",
+      "columns": [
+        { "name": "employee_id", "description": "Employee reference", "column_type": "VARCHAR(20)", "constraint": "PRIMARY KEY, FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1000" },
+        { "name": "attendance_pct", "description": "Attendance percentage", "column_type": "NUMERIC(5,2)", "constraint": "NULL", "example": 99.31 },
+        { "name": "last_calculated", "description": "Last calculated time", "column_type": "TIMESTAMP", "constraint": "DEFAULT CURRENT_TIMESTAMP", "example": "2024-05-21 10:00:00" }
+      ],
+      "joins": [
+        "employee_attendance.employee_id = employee.employee_id"
+      ]
+    },
+    {
+      "table_name": "employee_performance",
+      "description": "Employee performance reviews and ratings in Fin Solve Technologies",
+      "columns": [
+        { "name": "performance_id", "description": "Performance record id", "column_type": "SERIAL", "constraint": "PRIMARY KEY", "example": 1 },
+        { "name": "employee_id", "description": "Employee reference", "column_type": "VARCHAR(20)", "constraint": "FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1000" },
+        { "name": "performance_rating", "description": "Rating score", "column_type": "INT", "constraint": "CHECK (performance_rating BETWEEN 1 AND 5)", "example": 3 },
+        { "name": "last_review_date", "description": "Last review date", "column_type": "TIMESTAMP", "constraint": "NULL", "example": "2024-05-21" },
+        { "name": "reviewer_id", "description": "Reviewer employee id", "column_type": "VARCHAR(20)", "constraint": "FOREIGN KEY REFERENCES employee(employee_id)", "example": "FINEMP1006" }
+      ],
+      "joins": [
+        "employee_performance.employee_id = employee.employee_id",
+        "employee_performance.reviewer_id = employee.employee_id"
+      ]
+    }
+  ]
+}

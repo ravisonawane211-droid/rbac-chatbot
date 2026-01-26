@@ -1,0 +1,17 @@
+employee_id,user_id,password,user_role
+1,allison_hill,allison123,engineering
+2,noah_rhodes,noah457,marketing
+5,cristian_santos,cristian829,engineering
+12,jamie_arnold,jamie312,hr
+23,ethan_adams,ethan981,finance
+34,nathan_maldonado,nathan645,engineering
+50,eric_carney,eric504,c-level
+72,whitney_peters,whitney100,marketing
+83,michael_evans,michael722,finance
+95,john_whitehead,john871,hr
+120,jeffrey_chandler,jeffrey999,c-level
+3,angie_henderson,angie321,general
+4,daniel_wagner,daniel456,general
+6,connie_lawrence,connie789,general
+7,abigail_shaffer,abigail101,general
+9,gabrielle_davis,gabrielle202,general
