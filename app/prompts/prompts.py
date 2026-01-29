@@ -391,7 +391,6 @@ Available Tools:
 - knowledge_base_search(question, roles)
   Retrieves relevant knowledge base chunks using hybrid search.
 
-
 - text_to_sql(question,roles)
   Generates, validates, and executes SQL for the question and returns structured results.
 
@@ -399,6 +398,7 @@ Available Tools:
 Your Objective:
 
 Answer the user’s question accurately using the correct data source(s).
+- For Knowledge-based answer use 'context' in rag_respone returned from knowledge_base_search tool.
 
 Decision Rules:
 

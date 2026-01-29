@@ -1,20 +1,41 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,Connection
 from app.config.config import get_settings
 from app.utils.logger import get_logger
 import threading
 import pandas as pd
 import time
 from typing import Optional
+from typing import Iterator
+from contextlib import contextmanager
 
 settings = get_settings()
 
 class DatabaseExecuteService:
 
-    def __init__(self,timeout_seconds: int = 120):
-        self.timeout_seconds = timeout_seconds
+    def __init__(self,db_config : Optional[str], timeout_seconds: int = 120, ):
         self.logger = get_logger(__name__)
+
+        self.timeout_seconds = timeout_seconds
+
+        self.engine = create_engine(
+            url=db_config,
+            pool_pre_ping=True,
+            pool_size=10,
+            max_overflow=20
+        )
+
         self.logger.info(f"DatabaseExecutorService initialised with timeout_seconds {self.timeout_seconds}")
 
+
+    @contextmanager
+    def get_db(self) -> Iterator[Connection]:
+        """Context manager for a database connection that always closes on exit."""
+        conn = self.engine.connect()
+        try:
+            yield conn
+        finally:
+            self.logger.info("Closing database connection.")
+            conn.close()
 
     def _execute_query_with_timeout(self , sql_query : str, db_config : Optional[str]):
 
@@ -25,11 +46,9 @@ class DatabaseExecuteService:
 
         try:
             
-            engine = create_engine(url=db_config)
-
             def worker():
                 try:
-                    with engine.connect() as connection:
+                     with self.get_db() as connection:
                         result_df[0] = pd.read_sql(sql=sql_query,con=connection)
                 except Exception as e:
                     self.logger.error(f"error while executing query: {e}")
@@ -83,7 +102,14 @@ class DatabaseExecuteService:
         except Exception as e:
             self.logger.error(f"error occurred while executing query : {e}")
             return None
-
+        
+    
+    def save_dataframe_to_table(self, df, table_name: str, if_exists: str = 'append'):
+        """Saves a pandas DataFrame to a specified table in the database."""
+        self.logger.info(f"Saving DataFrame to table '{table_name}' with if_exists='{if_exists}'")
+        df.to_sql(table_name, self.conn, if_exists=if_exists, index=False)
+        self.logger.info(f"DataFrame saved to table '{table_name}' with if_exists='{if_exists}'")
+        
 
 
         

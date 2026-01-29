@@ -12,6 +12,8 @@ from app.services.llm_service import LLMService
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain_core.prompts import PromptTemplate
 from app.schemas.context import Context
+from app.schemas.agent_state import AgentState
+from langgraph.checkpoint.memory import InMemorySaver
 
 llm_service = LLMService()
 
@@ -37,7 +39,9 @@ fin_solve_agent = create_agent(
     tools=[knowledge_base_search, text_to_sql],
     middleware=[rag_prompt],
     context_schema=Context,
-    debug=True
+    state_schema=AgentState,
+    debug=True,
+    checkpointer=InMemorySaver()
 )
 
 

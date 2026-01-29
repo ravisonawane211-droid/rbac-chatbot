@@ -12,6 +12,7 @@ from langchain_classic.retrievers.ensemble import EnsembleRetriever
 from functools import lru_cache
 from langchain_core.documents import Document
 from app.agents.fin_solve_agent import fin_solve_agent
+import json
 
 settings = get_settings()
 
@@ -116,30 +117,44 @@ class ChatService:
             raise
     
 
-    async def chat(self,question: str):
+    async def chat(self,question: str,conversation_id:str):
         try:
             self.logger.info(f"invoking agent to answer user query : {question} with role: {self.roles}")
             
             answer = ""
 
-            response = await fin_solve_agent.ainvoke(input={"messages":[{"role": "user", "content": question}]},
-                                    context={"question": question,"roles": self.roles})
+            config = {"configurable": {"thread_id": conversation_id}}
+
+            response = await fin_solve_agent.ainvoke(input={"messages":[{"role": "user", "content": question}],
+                                                            "rag_response":{}},
+                                    context={"question": question,"roles": self.roles},
+                                    config=config)
             
             if response:
                 answer = response["messages"][-1].text
-                source_docs = self.hybrid_retriever.invoke(question)
+
+                knowledgge_base_resp = self.extract_tool(messages=response["messages"] , tool_name="knowledge_base_search")
+
+                text_to_sql_resp = self.extract_tool(messages=response["messages"] , tool_name="text_to_sql")
+
+                # source_docs = self.hybrid_retriever.invoke(question)
 
             self.logger.info(f"received response from agent: {answer} for user query: {question}")
 
             return {
                     "answer": answer,
-                    "sources": source_docs,
+                    "knowledgge_base_resp": knowledgge_base_resp,
+                    "text_to_sql_resp": text_to_sql_resp
                 }
             
         except Exception as e:
             self.logger.error(f"error while invoking agent : {e}")
             raise e
 
+    def extract_tool(self, messages, tool_name):
+        for m in messages:
+            if m.type == "tool" and m.name == tool_name:
+                return json.loads(m.content)
 
 
 

@@ -106,7 +106,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-API_BASE = "http://localhost:8000"
+API_BASE = "http://localhost:8002"
 
 # Authentication guard
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
@@ -245,6 +245,7 @@ with col3:
             # --- Logout ---
     if st.button("🚪 Logout"):
                 st.session_state["user"] = None
+                st.session_state["messages"] = []
                 st.switch_page("01_Login.py")
                 st.rerun()
     

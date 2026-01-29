@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application")
 
 
+
 # Create FastAPI application
 app = FastAPI(
     title=settings.app_name,
@@ -112,7 +113,7 @@ if __name__ == "__main__":
 
     # Start Streamlit in background on port 8502
     streamlit_proc = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", "./ui/01_Login.py", "--server.port", "8502"],
+        [sys.executable, "-m", "streamlit", "run", "./ui/01_Login.py", "--server.port", settings.ui_port],
         cwd=str(project_root),
     )
 

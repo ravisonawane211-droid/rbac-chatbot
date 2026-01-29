@@ -1,7 +1,11 @@
 from pydantic import Field , BaseModel 
-from typing import List
+from typing import List, Annotated, Dict, Any
+from langchain.agents import AgentState
+from langgraph.graph.message import add_messages
 
 
-class AgentState(BaseModel):
-    question: str = Field(..., description="Question provided by user")
-    roles: List[str] = Field(..., description="Logged-in user roles")
+
+class AgentState(AgentState):
+     messages: Annotated[list, add_messages]
+
+     rag_response: Dict[str, Any]

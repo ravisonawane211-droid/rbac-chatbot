@@ -13,7 +13,6 @@ from app.utils.logger import get_logger
 from app.config.config import get_settings
 from langchain_text_splitters import RecursiveCharacterTextSplitter,MarkdownTextSplitter,MarkdownHeaderTextSplitter
 import pandas as pd
-from app.services.db_service import DatabaseService
 from typing import Any
 from app.utils.util import token_len
 
@@ -34,7 +33,6 @@ class DocumentProcessService:
         self.logger = get_logger(__name__)
         self.chunk_size = chunk_size or settings.chunk_size
         self.chunk_overlap = chunk_overlap or settings.chunk_overlap
-        self.db_service = DatabaseService(settings.database_url)
 
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
@@ -48,7 +46,7 @@ class DocumentProcessService:
         self.markdown_text_splitter = MarkdownTextSplitter(chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,length_function=token_len)
 
-        self.SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".csv", ".md"}
+        self.SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md"}
 
         self.logger.info(
             f"DocumentProcessor initialized with chunk_size={self.chunk_size}, "

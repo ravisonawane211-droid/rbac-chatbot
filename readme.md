@@ -10,9 +10,11 @@ Each user query flows through a secure pipeline that combines natural language u
 
 ## 🧠 System Overview
 ```
-User Query  
+User Login to Chatbot
    ↓  
 Authentication & Role Validation
+   ↓
+User Query
    ↓
 Query Validation(Prompt Injection Detection , Normalization)
    ↓  
@@ -22,15 +24,14 @@ Agent-Based Query Routing
    ↓  
  ┌──────────────────────────┬─────────────────────────┐  
  │ Vector Search (RAG)      │   SQL Pipeline          │  
- │ Hybrid: Dense + BM25     │   Text-to-SQL (Postgres)│  
- │ Qdrant + Keyword Index   │                         │  
- └──────────────────────────┴─────────────────────────┘  
-   ↓  
-RRF Fusion  
-   ↓  
-Cohere Re-Ranking  
-   ↓  
-Role-Based Filtering  
+ │ Hybrid: Dense + BM25     │   Text-to-SQL (Postgres)|
+ │                          |   SQL Query Validation  |
+ |                          |   Query Execution       |
+ │ + Keyword Index +        │                         │  
+ | RRF + Cohere Re-Ranking  |                         | 
+ | + Role-Based             |                         |
+ | Filtering                |                         |                        
+ ┴──────────────────────────┴─────────────────────────┘  
    ↓  
 Context Augmentation  
    ↓  
@@ -45,7 +46,6 @@ Evaluation-Service (RAGAS) – Background / Asynchronous
 
 Each user is assigned a role that determines what data can be accessed:
 
-## 👥 Roles & Permissions  
 
 | Role                   | Accessible Data                                                                 |
 |------------------------|----------------------------------------------------------------------------------|

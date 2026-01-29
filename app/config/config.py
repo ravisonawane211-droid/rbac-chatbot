@@ -50,15 +50,17 @@ class Settings(BaseSettings):
 
 
     # API Settings
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    api_host: str = "127.0.0.1"
+    api_port: int = 8002
+
+    # streamlit 
+    ui_port: str = "8000"
 
     # Application Info
     app_name: str = "rbac_chatbot"
     app_version: str = "0.1.0"
 
     # Database Settings
-    database_url: str = "./resources/data/db/rbac_chatbot.db"
     qdrant_path:str = "./resources/data/qdrant_db_latest/rbac_chatbot.db"
 
     #JWT Config

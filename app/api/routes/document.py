@@ -6,7 +6,6 @@ from app.schemas.document_upload_response import DocumentUploadResponse
 from app.schemas.error_response import ErrorResponse
 from app.services.document_process_service import DocumentProcessService
 from app.services.dense_vector_store_service import VectorStoreService
-from app.services.db_service import DatabaseService
 from app.auth.jwt_bearer import JWTBearer
 from app.utils.logger import get_logger
 from pathlib import Path
@@ -79,19 +78,6 @@ async def upload_document(
                 f"Successfully processed {file.filename}: "
                 f"{len(documents)} chunks, {len(document_ids)} documents"
             )
-        else:
-            db_service = DatabaseService()
-            table_name = file.filename.split(".")[0].lower()
-
-            df_table_metadata = pd.DataFrame([{"role": role.lower(), "table_name": table_name}])
-            db_service.save_dataframe_to_table(df=df_table_metadata, table_name="table_access_metadata")
-
-            db_service.save_dataframe_to_table(df=documents, table_name=table_name)
-
-            document_ids = None
-
-            logger.info(
-                f"Successfully processed {file.filename}: ")
 
         return DocumentUploadResponse(
             message="Document uploaded and processed successfully",

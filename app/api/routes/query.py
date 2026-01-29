@@ -57,40 +57,58 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
         if query_cache_service and query_cache_service.enabled:
             cache_key = query_cache_service.get_key(request.question, role=user_info["roles"][0])
             cached_result = query_cache_service.get(cache_key, cache_type="rag")
-
+            sources = []
             if cached_result:
                 logger.info(f"Cache HIT {cached_result} for question: '{request.question[:50]}...'")
-                answer = cached_result["answer"]
-                sources = cached_result["sources"]
-                sources = json.loads(sources)
+                answer = cached_result.get("answer","")
+                sources = cached_result.get("sources",[])
+                sql_result = cached_result.get("sql_result","")
                 
-                sources = [
-                    Document(page_content=d["page_content"], metadata=d["metadata"])
-                    for d in sources
-                ]
+                # if sources:
+                #     sources = json.loads(sources)
+                    # sources = [
+                    #             Document(page_content=d["page_content"], metadata=d["metadata"])
+                    #             for d in sources
+                    #           ]
+                if sql_result:
+                    sources.extend([{"page_content":sql_result}])
             else:
-                result = await chat_service.chat(question=request.question)
+                result = await chat_service.chat(question=request.question, conversation_id=user_info["conversation_id"])
 
                 answer = result["answer"]
-                sources = result["sources"]
+                knowledgge_base_resp = result["knowledgge_base_resp"]
+                text_to_sql_resp = result["text_to_sql_resp"]
+                
+                cache_result = {}
+                sources = []
+                logger.info(f"caching query response in cache..")
+                cache_result["question"] = request.question
+                cache_result["answer"] = answer
 
-                payload = json.dumps([
-                    {"page_content": d.page_content, "metadata": d.metadata}
-                    for d in sources
-                ])
+                if knowledgge_base_resp:
+                    sources = knowledgge_base_resp["sources"]
+                    sources = json.loads(sources)
 
-                result = {
-                "question": request.question,
-                "answer": answer,
-                "chunks_used": len(sources),
-                "sources": payload,
-                "model": settings.llm_model,
-                }
+                    cache_result = {
+                        "chunks_used": len(sources),
+                        "sources": sources,
+                        "model": settings.llm_model,
+                        "tool": knowledgge_base_resp["tool"]
+                    }
+                   
+
+                if text_to_sql_resp:
+                    cache_result["sql_query"] = text_to_sql_resp["sql_query"]
+                    cache_result["sql_result"] = text_to_sql_resp["results"]
+                    cache_result["row_count"] = text_to_sql_resp["row_count"]
+                    sources.extend([{"page_content":cache_result["sql_result"]}])
+
                 ttl = settings.CACHE_TTL_RAG  # Default: 1 hour
-                query_cache_service.set(cache_key, result, ttl=ttl, cache_type="rag")
+                query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
+
                 logger.info(f"Cache MISS - cached result for '{request.question[:50]}...' (TTL: {ttl}s)")
         else:
-            result = await chat_service.chat(question=request.question)
+            result = await chat_service.chat(question=request.question, conversation_id=user_info["conversation_id"])
 
             answer = result["answer"]
             sources = result["sources"]
@@ -170,7 +188,7 @@ async def query_stream(request: QueryRequest,user_info: dict =Depends(auth_schem
         )
     
 def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources:list):
-    contexts = [source.page_content for source in sources]
+    contexts = [source.get("page_content","") for source in sources]
     
     metadata = {
         "retriever":"hybrid",

@@ -6,7 +6,7 @@ from app.schemas.login_request import LoginRequest
 from app.schemas.create_user_request import CreateUserRequest
 from app.schemas.create_user_response import CreateUserResponse
 from app.auth.jwt_bearer import JWTBearer
-from app.services.db_service import DatabaseService
+from app.services.db_execute_service import DatabaseExecuteService
 from app.utils.token_utils import create_access_token
 from app.config.config import get_settings
 from app.utils.logger import get_logger
@@ -39,11 +39,12 @@ def create_user(create_user_request:CreateUserRequest,user_info: dict =Depends(a
     if not create_user_request.user.user_id or not create_user_request.user.password or not create_user_request.user.user_role:
         raise HTTPException(status_code=400, detail="User name, password and role are required")
     
-    db_service = DatabaseService()
+    database_execute_service =  DatabaseExecuteService(db_config=settings.database_url)
+
     user_df = pd.DataFrame([{"user_id": create_user_request.user.user_id,"password": create_user_request.user.password,
                    "user_role": create_user_request.user.user_role[0]}])
 
-    db_service.save_dataframe_to_table(df=user_df,table_name="users")
+    database_execute_service.save_dataframe_to_table(df=user_df,table_name="users")
 
     logger.info(f"User {create_user_request.user.user_id} created successfully")
 
@@ -76,11 +77,12 @@ def login(login_request:LoginRequest):
     if not authenticated_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     else:
-        access_token=create_access_token(authenticated_user.user_id,authenticated_user.password,authenticated_user.user_role,
-                                             settings.secret_key,settings.algorithm)
-        authenticated_user.password = None
-
         conversation_id = str(uuid.uuid4())
+
+        access_token = create_access_token(user_id=authenticated_user.user_id, password=authenticated_user.password,
+                                         roles=authenticated_user.user_role, secret_key=settings.secret_key,
+                                         conversation_id=conversation_id, algorithm=settings.algorithm)
+        authenticated_user.password = None
         
         login_response = LoginResponse(
             message=f"Welcome {authenticated_user.user_id}!",

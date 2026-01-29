@@ -5,7 +5,7 @@ from app.services.dashboard_service import DashboardService
 from app.schemas.save_config_request import SaveConfigRequest
 from app.schemas.save_config_response import SaveConfigResponse
 from app.auth.jwt_bearer import JWTBearer
-from app.services.db_service import DatabaseService
+from app.services.db_execute_service import DatabaseExecuteService
 from app.utils.logger import get_logger
 from app.config.config import get_settings
 import pandas as pd
@@ -61,11 +61,11 @@ def create_user(save_config_request:SaveConfigRequest,user_info: dict =Depends(a
     if not save_config_request.enable_eval  or not save_config_request.eval_type:
         raise HTTPException(status_code=400, detail="Enable Evaluation and evaluation Type are required")
     
-    db_service = DatabaseService()
+    database_execute_service = DatabaseExecuteService(db_config=settings.database_url)
     user_df = pd.DataFrame([{"enable_eval": save_config_request.enable_eval,
                              "eval_type": save_config_request.eval_type}])
 
-    db_service.save_dataframe_to_table(df=user_df,table_name="app_config")
+    database_execute_service.save_dataframe_to_table(df=user_df,table_name="app_config")
 
     logger.info(f"User app_config created and saved config successfully")
 

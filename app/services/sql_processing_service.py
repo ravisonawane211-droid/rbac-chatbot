@@ -34,8 +34,8 @@ class SQLProcessingService:
         self.sql_generation_service = SQLGenerationService()
         self.sql_validation_service = SQLValidationSerice()
         
-        self.db_executor = DatabaseExecuteService()
-
+        self.db_executor = DatabaseExecuteService(db_config=settings.database_url)
+        
         self.logger.info("SQLProcessingService Initialized")
 
     
@@ -51,10 +51,21 @@ class SQLProcessingService:
 
             self.sql_query = self.sql_generation_service.generate_sql_query(user_query=self.user_query , entities=None, 
                                                             schema_components=schema_components)
-
+            
             # 3. Validate SQL Query using SQL Validation Service
+            roles = set(self.roles)
+            roles.add("general")
 
-            self.sql_validation_service.validate_sql_query(sql_query=self.sql_query,schema_component=schema_components)
+            role_list = ",".join(f"'{r}'" for r in roles)
+
+            tables_against_role_query = f"SELECT table_name from table_access_roles WHERE ROLE_NAME IN ({role_list})"
+
+            access_tables = self.db_executor.execute_sql_query(sql_query=tables_against_role_query)
+
+            allowed_tables = access_tables['table_name'].tolist()
+
+            self.sql_validation_service.validate_sql_query(sql_query=self.sql_query,schema_component=schema_components,
+                                                           allowed_tables=allowed_tables)
 
             # 4. Execute SQL Query with retry logic using DatabaseExecuteService
 
@@ -66,7 +77,7 @@ class SQLProcessingService:
             result = {
                 "status": "success",
                 "sql_query" : self.sql_query,
-                "results": result_df.to_dict(orient='records'),
+                "results": json.dumps(result_df.to_dict(orient='records')),
                 "row_count": len(result_df),
             }
 

@@ -736,3 +736,80 @@ INSERT INTO employee_performance(employee_id,performance_rating,last_review_date
 VALUES ('FINEMP1098',4,'2024-08-06');
 INSERT INTO employee_performance(employee_id,performance_rating,last_review_date)
 VALUES ('FINEMP1099',3,'2024-11-09');
+
+
+INSERT INTO table_access_roles VALUES
+('employee','HR'),
+('employee','Admin'),
+
+('employee_compensation','Finance'),
+('employee_compensation','HR'),
+('employee_compensation','Admin'),
+
+('employee_performance','Managers'),
+('employee_performance','HR'),
+('employee_performance','Admin'),
+
+('employee_leave','HR'),
+('employee_leave','Employees'),
+('employee_leave','Admin'),
+
+('employee_attendance','HR'),
+('employee_attendance','Managers'),
+('employee_attendance','Admin'),
+
+('departments','Admin'),
+('departments','HR'),
+('departments','Managers'),
+
+('locations','Admin'),
+('locations','HR'),
+('locations','Managers');
+
+
+
+INSERT INTO users (user_id, employee_id, password, user_role)
+SELECT
+    email                                    AS user_id,
+    employee_id,
+    lower(split_part(full_name, ' ', 2)) || '_' || extract(year FROM date_of_joining)     AS password,
+
+    CASE
+        -- Finance
+        WHEN role ILIKE '%financial%'
+          OR role ILIKE '%credit%'
+          OR role ILIKE '%treasury%'
+          OR role ILIKE '%risk%'
+        THEN 'finance'
+
+        -- Marketing
+        WHEN role ILIKE '%marketing%'
+          OR role ILIKE '%sales%'
+        THEN 'marketing'
+
+        -- HR
+        WHEN role ILIKE '%hr%'
+        THEN 'hr'
+
+        -- Engineering
+        WHEN role ILIKE '%engineer%'
+          OR role ILIKE '%developer%'
+          OR role ILIKE '%devops%'
+          OR role ILIKE '%qa%'
+          OR role ILIKE '%software%'
+          OR role ILIKE '%data%'
+        THEN 'engineering'
+
+        -- C-Level / Managers
+        WHEN role ILIKE '%manager%'
+        THEN 'Managers'
+
+        -- Default Employee
+        ELSE 'general'
+    END AS user_role
+
+FROM employee
+ON CONFLICT (user_id) DO NOTHING;
+
+
+COMMIT;

@@ -112,6 +112,13 @@ CREATE TABLE employee_attendance (
         ON DELETE CASCADE
 );
 
+CREATE TABLE table_access_roles (
+    table_name VARCHAR(100),
+    role_name  VARCHAR(50),
+    PRIMARY KEY (table_name, role_name)
+);
+
+
 
 CREATE INDEX IF NOT EXISTS idx_locations_country ON locations(country);
 CREATE INDEX IF NOT EXISTS idx_locations_city ON locations(city);

@@ -10,18 +10,28 @@ class SQLValidationSerice:
         self.logger.info("SQLValidationSerice initialized")
         
 
-    def validate_sql_query(self,sql_query: str, schema_component: Dict[str, Any] = None):
-
-        self.logger.info("Starting SQL query validatons: ")
-
+    def validate_sql_query(self,sql_query: str, schema_component: Dict[str, Any] = None, allowed_tables:list=[]):
+        
         try:
+            self.logger.info("Starting SQL query validatons: ")
+
+            self._validate_against_role(sql_query=sql_query, allowed_tables=allowed_tables)
             self._validate_basic_syntax(sql_query=sql_query)
             self._validate_against_schema(sql_query=sql_query,schema_component=schema_component)
+
             self.logger.info("SQL Query validation successfull.")
         except Exception as e:
             self.logger.error(f"Error while validating sql query {e}")
             raise e
 
+    def _validate_against_role(self,sql_query:str, allowed_tables:list=[]):
+
+        self.logger.info(f"Validating role to access tables in query")
+        
+        if self._validate_tables(sql_query=sql_query, allowed_tables=allowed_tables,alias_map = {}):
+            raise Exception("Your role does not allow access to the data needed for this request.")
+        
+        self.logger.info("Validating role to access tables in query completed")
 
 
     def _validate_basic_syntax(self, sql_query: str):

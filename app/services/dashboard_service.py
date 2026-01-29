@@ -3,7 +3,7 @@ import requests
 from app.config.config import get_settings
 from app.utils.logger import get_logger
 from app.schemas.app_config import AppConfig
-from app.services.db_service import DatabaseService
+from app.services.db_execute_service import DatabaseExecuteService
 from functools import lru_cache
 
 logger = get_logger(__name__)
@@ -13,13 +13,11 @@ settings = get_settings()
 def get_app_config() -> AppConfig:
         """Return application configuration"""
         logger.info("Fetching app configuration from app_config table")
-        
-        db_service = DatabaseService(db_path="./resources/data/db/rbac_chatbot.db")
-
+        database_execute_service = DatabaseExecuteService(db_config=settings.database_url)
         query = "SELECT enable_eval,eval_type FROM app_config;"
         app_config = None
         try:
-            with db_service.get_db() as conn:
+            with database_execute_service.get_db() as conn:
                 row = conn.execute(query).fetchone()
                 enable_eval = row["enable_eval"]
                 eval_type = row["eval_type"]

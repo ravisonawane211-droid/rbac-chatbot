@@ -87,7 +87,7 @@ def submit_login(user_name:str,password:str):
 
     login_request = LoginRequest(user_name=user_name,password=password)
     try:
-        login_response = requests.post(url="http://localhost:8000/users/login",
+        login_response = requests.post(url="http://localhost:8002/users/login",
                                     json=login_request.model_dump())
         login_response = login_response.json()
         if(login_response['status']=="success"):
