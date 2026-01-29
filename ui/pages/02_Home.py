@@ -106,7 +106,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-API_BASE = "http://localhost:8002"
+API_BASE = "http://localhost:8000"
 
 # Authentication guard
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:

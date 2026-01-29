@@ -51,10 +51,10 @@ class Settings(BaseSettings):
 
     # API Settings
     api_host: str = "127.0.0.1"
-    api_port: int = 8002
+    api_port: int = 8000
 
     # streamlit 
-    ui_port: str = "8000"
+    ui_port: str = "8002"
 
     # Application Info
     app_name: str = "rbac_chatbot"
