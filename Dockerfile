@@ -34,10 +34,10 @@ RUN chown -R appuser:appgroup $APP_HOME
 USER appuser
 
 # streamlit port
-#EXPOSE 8002
+EXPOSE 8002
 
 # fastapi port
-EXPOSE 8000
+#EXPOSE 8000
 
 # Healthcheck using Python stdlib (no extra deps required)
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
