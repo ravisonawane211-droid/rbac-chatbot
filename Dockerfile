@@ -37,14 +37,14 @@ USER appuser
 #EXPOSE 8002
 
 # fastapi port
-#EXPOSE 8000
+EXPOSE 10000
 
 # Healthcheck using Python stdlib (no extra deps required)
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 #   CMD python -c "import urllib.request,sys; port = '$(echo $PORT)';  url = f'http://127.0.0.1:{port}/health';  sys.exit(0 if urllib.request.urlopen(url,timeout=10).getcode()==200 else 1)"
 
-# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-#   CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').getcode()==200 else 1)"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:10000/health').getcode()==200 else 1)"
 
 
 # Run the app
