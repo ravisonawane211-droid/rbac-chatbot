@@ -34,7 +34,7 @@ RUN chown -R appuser:appgroup $APP_HOME
 USER appuser
 
 # streamlit port
-EXPOSE 8002
+#EXPOSE 8002
 
 # fastapi port
 #EXPOSE 8000
@@ -44,4 +44,5 @@ EXPOSE 8002
 #   CMD python -c "import urllib.request,sys; port = '$(echo $PORT)';  url = f'http://127.0.0.1:{port}/health';  sys.exit(0 if urllib.request.urlopen(url,timeout=10).getcode()==200 else 1)"
 
 # Run the app
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+#CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["python", "app/main.py"]
