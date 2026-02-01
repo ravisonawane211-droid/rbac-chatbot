@@ -34,7 +34,7 @@ RUN chown -R appuser:appgroup $APP_HOME
 USER appuser
 
 # streamlit port
-#EXPOSE 8002
+EXPOSE 8002
 
 # fastapi port
 #EXPOSE 8000
