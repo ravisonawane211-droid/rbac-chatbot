@@ -21,11 +21,6 @@ class Settings(BaseSettings):
     # Google Configuration
     google_api_key: str
 
-    # Qdrant Cloud Configuration
-    qdrant_url: str
-    qdrant_api_key: str
-
-
     # Collection Settings
     collection_name: str = "RBAC_CHATBOT"
 
