@@ -14,7 +14,7 @@ import json
 import hashlib
 import logging
 from typing import Optional, Dict, Any
-from utils.util import normalize
+from app.utils.util import normalize
 
 logger = logging.getLogger(__name__)
 
