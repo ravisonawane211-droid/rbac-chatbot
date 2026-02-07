@@ -19,8 +19,8 @@ langchain_openai
 langgraph
 
 #
-docling
-langchain-docling
+#docling
+#langchain-docling
 
 
 passlib[bcrypt]
@@ -48,3 +48,13 @@ upstash-redis
 #cohere re-ranking
 cohere
 langchain-cohere
+
+# Markdown
+unstructured[md]
+langchain-unstructured
+
+# PDF
+pymupdf4llm
+
+#ollama
+langchain_ollama

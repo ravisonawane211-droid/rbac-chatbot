@@ -111,7 +111,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
-    public_port = os.environ.get("PORT", "8501")
+    public_port = os.environ.get("PORT", "8502")
     print(f"Starting Streamlit using PORT: {public_port}")
     # Start Streamlit in background on port 8502
     try:

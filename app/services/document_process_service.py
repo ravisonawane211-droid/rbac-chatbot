@@ -3,11 +3,14 @@ import tempfile
 from pathlib import Path
 from typing import BinaryIO
 from langchain_core.documents import Document
-from langchain_docling import DoclingLoader
-from langchain_docling.loader import ExportType
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from langchain_community.document_loaders import UnstructuredMarkdownLoader, PyMuPDFLoader
+import pymupdf4llm
+# from langchain_docling import DoclingLoader
+# from langchain_docling.loader import ExportType
+# from docling.document_converter import DocumentConverter, PdfFormatOption
+# from docling.datamodel.base_models import InputFormat
+# from docling.datamodel.pipeline_options import PdfPipelineOptions
+
 
 from app.utils.logger import get_logger
 from app.config.config import get_settings
@@ -78,9 +81,14 @@ class DocumentProcessService:
         """
         self.logger.info(f"Loading Markdown file: {file_path} using DoclingLoader")
 
-        markdown_loader = DoclingLoader(file_path=file_path
-                                ,export_type=ExportType.MARKDOWN)
-        documents = markdown_loader.load()
+        loader = UnstructuredMarkdownLoader(  
+            file_path,  
+            mode="elements",  
+            strategy="fast",  
+            )
+        # markdown_loader = DoclingLoader(file_path=file_path
+        #                         ,export_type=ExportType.MARKDOWN)
+        documents = loader.load()
 
         self.logger.info(f"Loaded {len(documents)} documents from Markdown: {file_path}")
         return documents
@@ -96,24 +104,28 @@ class DocumentProcessService:
         self.logger.info(f"Loading PDF file: {file_path} using DoclingLoader")
 
         # Create custom converter with specific options
-        custom_pipeline = PdfPipelineOptions(
-            do_ocr=False,
-            do_table_structure=True,
-        )
+        # custom_pipeline = PdfPipelineOptions(
+        #     do_ocr=False,
+        #     do_table_structure=True,
+        # )
 
-        custom_converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=custom_pipeline)
-            }
-        )
+        # custom_converter = DocumentConverter(
+        #     format_options={
+        #         InputFormat.PDF: PdfFormatOption(pipeline_options=custom_pipeline)
+        #     }
+        # )
 
-        pdf_loader = DoclingLoader(file_path=file_path
-                                ,export_type=ExportType.MARKDOWN
-                                ,document_converter=custom_converter)
-        documents = pdf_loader.load()
+        # pdf_loader = DoclingLoader(file_path=file_path
+        #                         ,export_type=ExportType.MARKDOWN
+        #                         ,document_converter=custom_converter)
+        #documents = pdf_loader.load()
 
-        self.logger.info(f"Loaded {len(documents)} documents from PDF: {file_path}")
-        return documents
+        text = pymupdf4llm.to_markdown(file_path)
+
+        doc = Document(page_content=text, metadata={"source": file_path})
+
+        self.logger.info(f"Loaded 1 document from PDF: {file_path}")
+        return [doc]
 
 
     def _load_file(self, file_path: str | Path) -> Any:

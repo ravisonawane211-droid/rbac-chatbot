@@ -24,7 +24,7 @@ RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 # Copy application files
 COPY app/ $APP_HOME/app/
 COPY ui/ $APP_HOME/ui/
-COPY resources/ $APP_HOME/resources/
+COPY resources/data/qdrant_db_latest/ $APP_HOME/resources/data/qdrant_db_latest/
 
 
 # Fix ownership (use APP_HOME, not /app)
