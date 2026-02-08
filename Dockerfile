@@ -33,6 +33,8 @@ RUN chown -R appuser:appgroup $APP_HOME
 # Switch to non-root user
 USER appuser
 
+RUN mkdir -p /home/appuser && chmod -R 777 /home/appuser
+
 # streamlit port
 #EXPOSE 8002
 
