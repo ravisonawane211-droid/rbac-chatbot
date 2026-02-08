@@ -33,11 +33,12 @@ RUN chown -R appuser:appgroup $APP_HOME
 # Switch to non-root user
 USER appuser
 
-ENV HOME=/tmp
+RUN mkdir -p /opt/streamlit && echo ok
 
-ENV STREAMLIT_HOME=/tmp
+ENV HOME=/opt/streamlit
 
-RUN chmod -R 777 /tmp
+ENV STREAMLIT_HOME=/opt/streamlit
+
 
 # streamlit port
 #EXPOSE 8002
