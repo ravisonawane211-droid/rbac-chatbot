@@ -33,12 +33,8 @@ RUN chown -R appuser:appgroup $APP_HOME
 # Switch to non-root user
 USER appuser
 
-RUN mkdir -p /opt/streamlit && echo ok
-
-ENV HOME=/opt/streamlit
-
-ENV STREAMLIT_HOME=/opt/streamlit
-
+ENV HOME=/app
+ENV STREAMLIT_HOME=/app
 
 # streamlit port
 #EXPOSE 8002
