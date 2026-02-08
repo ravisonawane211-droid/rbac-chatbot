@@ -58,5 +58,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 #CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
 #CMD ["python", "app/main.py"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
-
-CMD ["streamlit", "run", "./ui/01_Login.py", "--server.address", "0.0.0.0", "--server.port", "10000"]
