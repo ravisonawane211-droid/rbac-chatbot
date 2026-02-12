@@ -106,7 +106,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-API_BASE = "https://rbac-chatbot.onrender.com"
+API_BASE = "http://localhost:10000"
 
 # Authentication guard
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:

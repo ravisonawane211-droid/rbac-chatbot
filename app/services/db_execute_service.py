@@ -18,11 +18,12 @@ class DatabaseExecuteService:
         self.timeout_seconds = timeout_seconds
 
         self.engine = create_engine(
-            url=db_config,
-            pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20
-        )
+                url=db_config,
+                pool_pre_ping=True,
+                pool_size=3,
+                max_overflow=1,
+                pool_recycle=1800,
+            )
 
         self.logger.info(f"DatabaseExecutorService initialised with timeout_seconds {self.timeout_seconds}")
 

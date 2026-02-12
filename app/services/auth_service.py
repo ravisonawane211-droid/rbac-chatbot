@@ -16,7 +16,7 @@ def get_user(username:str,db_service:DatabaseExecuteService):
 
     user_df = db_service.execute_sql_query(sql_query=f"SELECT employee_id,user_id,password,user_role FROM users WHERE user_id = '{username}'")
 
-    if not user_df.empty:
+    if user_df is not None and not user_df.empty :
         row = user_df.iloc[0]
         user = User(
                     user_id=row["user_id"],

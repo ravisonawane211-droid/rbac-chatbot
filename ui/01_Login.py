@@ -1,11 +1,35 @@
+
 import streamlit as st
 import requests
 from app.schemas.login_request import LoginRequest
 from app.utils.logger import get_logger
+import base64
 
 logger = get_logger(__name__)
 
-st.set_page_config(page_title="FinSolve Login", page_icon="🔒", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="FinSolve Login", 
+                   page_icon="🔒", 
+                   layout="centered", 
+                   initial_sidebar_state="collapsed")
+
+def set_bg_from_local(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode()
+
+    css = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpg;base64,{encoded}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+#set_bg_from_local("resources/chatbot_background.png")
 
 # --- Custom responsive CSS for a nicer login card ---
 st.markdown(
@@ -87,7 +111,7 @@ def submit_login(user_name:str,password:str):
 
     login_request = LoginRequest(user_name=user_name,password=password)
     try:
-        login_response = requests.post(url="https://rbac-chatbot.onrender.com/users/login",
+        login_response = requests.post(url="http://localhost:10000/users/login",
                                     json=login_request.model_dump())
         login_response = login_response.json()
         if(login_response['status']=="success"):

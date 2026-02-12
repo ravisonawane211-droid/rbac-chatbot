@@ -90,6 +90,7 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
                     sources = json.loads(sources)
 
                     cache_result = {
+                        **cache_result,
                         "chunks_used": len(sources),
                         "sources": sources,
                         "model": settings.llm_model,
