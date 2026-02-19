@@ -9,111 +9,131 @@ from app.schemas.app_config import AppConfig
 from app.utils.logger import get_logger
 from app.config.config import get_settings
 
-
 logger = get_logger(__name__)
 settings = get_settings()
 
-# Page configuration
-st.set_page_config(page_title="FinSolve Chatbot", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
-
-st.write("")  # spacer
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.markdown('<div class="chatbot-title">Welcome To FinSolve Technologies</div>', unsafe_allow_html=True)
-
-# --- Styles for a professional, ChatGPT-like chat UI ---
-st.markdown(
-    """
-    <style>
-    :root {
-        --bg: #f6f7fb;
-        --card: #ffffff;
-        --muted: #6b7280;
-        --accent: #06b6d4;
-        --user-gradient: linear-gradient(90deg,#34d399 0%,#10b981 100%);
-        --radius: 12px;
-        --shadow: 0 8px 24px rgba(16,24,40,0.08);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-    }
-
-    .stApp { background: var(--bg); min-height: 100vh; }
-
-    .chatbot-title {
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-
-    .chat-card {
-        max-width: 980px;
-        margin: 2.25rem auto;
-        background: var(--card);
-        border-radius: 14px;
-        padding: 0;
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        border: 1px solid rgba(15,23,42,0.04);
-    }
-
-    .chat-header {
-        padding: 1rem 1.25rem;
-        background: transparent;
-        border-bottom: 1px solid rgba(15,23,42,0.04);
-    }
-    .chat-header h2 { margin: 0; font-size: 1.125rem; font-weight:700; color: #0f172a; }
-    .chat-header p { margin: 0; color: var(--muted); font-size: 0.875rem; }
-
-    .chat-body { display:flex; gap:1.25rem; padding: 1rem; }
-    /* Use a transparent messages background so it blends with the card and does not create a large white box */
-    .messages { flex: 1; min-height: 30vh; max-height: 56vh; border-radius: 10px; padding: 0.75rem; background: transparent; overflow:auto }
-    .controls { width: 320px; max-width: 40%; }
-
-    .msg { margin-bottom: 0.9rem; display:flex; gap:0.75rem; align-items: flex-end; max-width: 82%; }
-    .msg .msg-content { padding: 0.7rem 0.95rem; border-radius: 10px; font-size: 0.95rem; line-height:1.35; box-shadow: 0 4px 10px rgba(2,6,23,0.03); }
-
-    .msg.assistant { align-self:flex-start; }
-    .msg.assistant .avatar { background: #eef2ff; color: #4f46e5; }
-    .msg.assistant .msg-content { background: #ffffff; color: #0f172a; border: 1px solid rgba(15,23,42,0.03); border-bottom-left-radius:6px; }
-
-    .msg.user { margin-left: auto; align-self:flex-end; flex-direction: row-reverse; }
-    .msg.user .avatar { background: var(--user-gradient); color: white; }
-    .msg.user .msg-content { background: var(--user-gradient); color: white; border-bottom-right-radius:6px; }
-
-    .avatar { width:34px; height:34px; min-width:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:600; font-size:0.9rem; }
-
-    .msg-meta { display:block; font-size:0.75rem; color:var(--muted); margin-top:4px; }
-
-    /* Input area styling */
-    .chat-input { padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(15,23,42,0.06); background: #fff; }
-    .send-row { display:flex; gap:0.6rem; align-items:center; }
-    .send-row .send-btn { background: var(--accent) !important; color: white !important; border-radius: 8px !important; padding: 0.55rem 0.9rem !important; font-weight:600 !important; }
-
-    /* Accessibility tweaks */
-    .msg .msg-content code, .msg .msg-content pre { background: rgba(15,23,42,0.04); padding: 0.2rem 0.4rem; border-radius:6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace; }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-        .chat-body { flex-direction: column; }
-        .controls { width: 100%; }
-        .chat-card { margin: 1rem; }
-    }
-
-    /* Clean UI */
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
-    </style>
-    """,
-    unsafe_allow_html=True,
+st.set_page_config(
+    page_title="FinSolve Chatbot",
+    page_icon="🤖",
+    layout="wide"
 )
 
 API_BASE = "http://localhost:10000"
 
-# Authentication guard
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
-    st.warning("You need to log in first.")
-    st.switch_page("01_Login.py")
+# =====================================================
+# 🎨 ENTERPRISE STYLING
+# =====================================================
+st.markdown("""
+<style>
+:root {
+    --bg: #0f172a;
+    --card: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.08);
+}
 
-# Helper functions
+.stApp {
+    background: radial-gradient(circle at 30% 30%, #1e1b4b 0%, #0b0f1a 50%);
+    color: white;
+}
+
+#MainMenu {visibility:hidden;}
+footer {visibility:hidden;}
+header {visibility:hidden;}
+
+section.main > div {
+    max-width: 1400px;
+    margin: 2rem auto;
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    padding: 30px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+}
+
+/* Tabs */
+div[data-baseweb="tab-list"] {
+    gap: 10px;
+}
+
+button[role="tab"] {
+    background: rgba(255,255,255,0.08) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+}
+
+button[role="tab"][aria-selected="true"] {
+    background: white !important;
+    color: black !important;
+    font-weight: 600 !important;
+}
+
+/* Labels */
+label {
+    color: white !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background: white !important;
+    color: black !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+}
+
+/* File uploader browse button */
+[data-testid="stFileUploader"] button {
+    color: black !important;
+    font-weight: 600 !important;
+}
+
+/* Assistant text white */
+[data-testid="stChatMessage"] div {
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =====================================================
+# 🔐 LOGIN CHECK
+# =====================================================
+if not st.session_state.get("logged_in"):
+    st.warning("Please login first.")
+    st.switch_page("00_Landing.py")
+    st.stop()
+
+# =====================================================
+# 👤 USER INFO
+# =====================================================
+user = st.session_state.get("user", {})
+logged_in_user = user.get("user_id", "User")
+roles_list = user.get("user_role", [])
+role = roles_list[0].lower() if roles_list else "general"
+
+col1, col2 = st.columns([8, 2])
+
+with col1:
+    st.markdown("### 🏦 Fin Assist AI Platform")
+
+with col2:
+    st.markdown(f"**👤 {logged_in_user}**  \n**Role:** {role}")
+    if st.button("Logout"):
+        st.session_state.clear()
+        st.switch_page("00_Landing.py")
+
+st.divider()
+
+# =====================================================
+# 📑 ROLE-BASED TABS
+# =====================================================
+if role == "c-level":
+    tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat", "📤 Upload", "🛠 Admin", "📊 Dashboard"])
+else:
+    (tab1,) = st.tabs(["💬 Chat"])
+
+# =====================================================
+# 💬 CHAT TAB
+# =====================================================
 def call_query_api(question: str):
     """Call the backend query endpoint and return the answer."""
 
@@ -233,68 +253,54 @@ def style_scores_by_status(row):
             styles.append("")
     return styles
 
-
-# Top-level tabs
-
-user = st.session_state.get("user", {"user_id": "Guest","user_role": "general"})
-logged_in_user:str = user["user_id"] if user["user_id"] else "Guest"
-role:str = user["user_role"][0].lower() if user["user_role"] else "general"
-
-with col3:
-    st.markdown(f"**👤 User:** `{logged_in_user}`  \n**🛡️ Role:** `{role}`")
-            # --- Logout ---
-    if st.button("🚪 Logout"):
-                st.session_state["user"] = None
-                st.session_state["messages"] = []
-                st.switch_page("01_Login.py")
-                st.rerun()
-    
-        # Role-specific section
-        # Dynamic rendering
-st.markdown("")
-if role == "c-level":
-            st.write("You have global access")
-            tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat", " 📤 Upload", " 🛠️ Admin", "📊 Dashboard"])
-        
-elif role == "general":
-            st.write(f"You have access to documents and features related to the `{role}` role.")
-            (tab1,) =  st.tabs(["💬 Chat"])
-
-else:
-            st.write(f"You have access to documents and features related to the `{role}` role.")
-            st.markdown("You also have access to **General documents** (e.g., company policies, holidays, announcements)")
-            (tab1,) = st.tabs(["💬 Chat"])
-
-# --- Chatbot tab ---
 with tab1:
-    # Ensure messages exist
-    
+
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [
-            {"role": "assistant", "content": f"Hi, {user['user_id']}. How can I help you?"}
+        st.session_state.messages = [
+            {"role": "assistant", "content": f"Hi {logged_in_user}, how can I assist you today?"}
         ]
 
     for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+        with st.chat_message(msg["role"]):
+            if msg["role"] == "assistant":
+                st.markdown(
+                    f"<div style='color:white;font-weight:700;'>🤖 {msg['content']}</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(f"👤 {msg['content']}")
 
-    if prompt := st.chat_input(placeholder="Type your question here..."):
+    if prompt := st.chat_input("Ask FinSolve AI..."):
+
         st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").write(prompt)
 
-        answer = call_query_api(question=prompt)
+        with st.chat_message("user"):
+            st.markdown(f"👤 {prompt}")
 
         with st.chat_message("assistant"):
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            thinking = st.empty()
+            thinking.markdown("🤖 *FinSolve AI is analyzing your request...*")
+            answer = call_query_api(prompt)
+            thinking.empty()
+
+            st.markdown(
+                f"<div style='color:white;font-weight:700;'>🤖 {answer}</div>",
+                unsafe_allow_html=True
+            )
+
+        st.session_state.messages.append({"role": "assistant", "content": answer})
         st.rerun()
 
-
-# --- Upload tab ---
+# =====================================================
+# 📤 UPLOAD TAB
+# =====================================================
 if role == "c-level":
     with tab2:
         st.header("Upload Documents")
-        st.info("Upload PDF, TXT, Markdown or CSV files to be processed and added to the vector store.")
-        uploaded_file = st.file_uploader("Choose a file", type=["pdf", "txt", "csv", "md"])    
-        role = st.selectbox("Document role", options=["general", "engineering", "marketing", "finance", "hr"], index=0)
+
+        uploaded_file = st.file_uploader("Choose file", type=["pdf","txt","csv","md"])
+        doc_role = st.selectbox("Document role", ["general","engineering","marketing","finance","hr"])
+
         if st.button("Upload", key="upload_btn"):
             if not uploaded_file:
                 st.error("Please select a file to upload.")
@@ -307,29 +313,38 @@ if role == "c-level":
                         st.success(result.get("message", "Upload succeeded"))
                         st.write(result)
 
-    # --- Admin tab ---
+# =====================================================
+# 🛠 ADMIN TAB
+# =====================================================
     with tab3:
-        st.header("Admin — Create User")
+        st.header("Admin Panel")
 
-        add_user, app_config = st.tabs(["Add User", " App Config"])
+        admin_tab1, admin_tab2 = st.tabs(["👤 User Management", "⚙ Configuration"])
 
-        with add_user:
-            st.info("Create a new user for the application.")
-            new_username = st.text_input("Username")
-            new_password = st.text_input("Password", type="password")
-            new_role = st.selectbox("Role", options=["general", "engineering", "marketing", "finance", "hr","admin","c-level"], index=0)
-            if st.button("Create user",type="primary",key="create_user"):
-                if not new_username or not new_password:
-                    st.error("Username and password are required.")
-                else:
-                    resp = create_user_api(new_username, new_password, new_role)
-                    if resp.get("error"):
-                        st.error(f"User creation failed: {resp['error']}")
+        # USER TAB
+        with admin_tab1:
+            st.subheader("Create User")
+
+            new_username = st.text_input("Username", key="admin_user_username")
+            new_password = st.text_input("Password", type="password", key="admin_user_password")
+            new_role = st.selectbox(
+                "Role",
+                ["general","engineering","marketing","finance","hr","admin","c-level"],
+                key="admin_user_role"
+            )
+
+            if st.button("Create User", key="create_user_btn"):
+                if new_username and new_password:
+                    response = create_user_api(new_username, new_password, new_role)
+                    if response.get("error"):
+                        st.error(response["error"])
                     else:
-                        st.success("User created successfully")
-                        st.write(resp)
-            # --- App Config tab ---
-        with app_config:
+                        st.success("User created successfully.")
+                else:
+                    st.warning("Username and password required.")
+
+        # CONFIG TAB
+        with admin_tab2:
             st.header("Add Application Configuration")
             st.info("Configure application settings here.")
             enable_evaluation = st.radio(label="Enable Evaluation",options=["Yes","No"])
@@ -346,10 +361,10 @@ if role == "c-level":
                         st.success("App Config saved successfully")
 
 
-    # --- Dashboard tab ---
+# =====================================================
+# 📊 DASHBOARD TAB
+# =====================================================
     with tab4:
-        st.header("Dashboard")
-        
         with st.spinner("Fetching Metrics..."):
             response = get_evaluation_metrics_dashboard(settings.app_name)
             metrics = response.get("metrics", [])
@@ -414,3 +429,4 @@ if role == "c-level":
                 )
             else:
                  st.error("Unable to get metrics from evaluation services.Please contact administrator.")
+

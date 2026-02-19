@@ -116,7 +116,7 @@ if __name__ == "__main__":
     # Start Streamlit in background on port 8502
     try:
         streamlit_proc = subprocess.Popen(
-            [sys.executable, "-m", "streamlit", "run", "./ui/01_Login.py", "--server.address", "0.0.0.0", "--server.port", public_port],
+            [sys.executable, "-m", "streamlit", "run", "./ui/00_Landing.py", "--server.address", "0.0.0.0", "--server.port", public_port],
             cwd=str(project_root),
         )
 
