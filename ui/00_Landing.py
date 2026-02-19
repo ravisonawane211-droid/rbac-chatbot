@@ -11,6 +11,56 @@ logger = get_logger(__name__)
 # ==========================================
 st.markdown("""
 <style>
+
+.navbar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 20px 40px;
+}
+
+.logo {
+    font-size:26px;
+    font-weight:700;
+    color:white;
+}
+
+/* Pill */
+.nav-pill {
+    display:inline-flex;
+    gap:30px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(15px);
+    padding: 12px 30px;
+    border-radius: 50px;
+    border:1px solid rgba(255,255,255,0.1);
+}
+
+/* Streamlit buttons */
+.nav-pill .stButton > button {
+    background: transparent !important;
+    border: none !important;
+    color: #D1D5DB !important;
+    font-size: 16px !important;
+}
+
+.nav-pill .stButton > button:hover {
+    color: white !important;
+}
+
+.stButton > button {
+    background: rgba(255,255,255,0.08);
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    font-size: 15px;
+    padding: 8px 0px;
+}
+
+.stButton > button:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
             
 .main-content {
     margin-top: 90px;
@@ -283,51 +333,46 @@ def submit_login(user_name: str, password: str):
 # ==========================================
 # NAVIGATION STATE
 # ==========================================
+# Initialize page state
 if "page" not in st.session_state:
     st.session_state.page = "Home"
 
-# ==========================================
-# NAVBAR
-# ==========================================
-st.markdown('<div class="navbar">', unsafe_allow_html=True)
+# Logo Row
+col_logo, col_spacer = st.columns([1,5])
+with col_logo:
+    st.markdown("### 🟢 Fin Assist AI")
 
-col1, col2, col3, col4, col5, col6 = st.columns([3,1,1,1,1,1])
+st.markdown("---")
 
-with col1:
-    st.markdown("### 🤖 Fin Assist AI")
+# Navbar Row
+c1, c2, c3, c4, c5 = st.columns(5)
 
-with col2:
-    st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-    if st.button("Home"):
+with c1:
+    if st.button("Home", use_container_width=True):
         st.session_state.page = "Home"
-    st.markdown('</div>', unsafe_allow_html=True)
+        print(f"Page Home: {st.session_state.page}")
 
-with col3:
-    st.markdown('<div class="features-btn">', unsafe_allow_html=True)
-    if st.button("Features", key="features_btn"):
+with c2:
+    if st.button("Features", use_container_width=True):
         st.session_state.page = "Features"
-    st.markdown('</div>', unsafe_allow_html=True)
+        print(f"Page Features: {st.session_state.page}")
 
-with col4:
-    st.markdown('<div class="about-btn">', unsafe_allow_html=True)
-    if st.button("About Us", key="about_btn"):
+with c3:
+    if st.button("About Us", use_container_width=True):
         st.session_state.page = "About"
-    st.markdown('</div>', unsafe_allow_html=True)
+        print(f"Page About: {st.session_state.page}")
 
-with col5:
-    st.markdown('<div class="contact-btn">', unsafe_allow_html=True)
-    if st.button("Contact", key="contact_btn"):
+with c4:
+    if st.button("Contact", use_container_width=True):
         st.session_state.page = "Contact"
-    st.markdown('</div>', unsafe_allow_html=True)
+        print(f"Page Contact: {st.session_state.page}")
 
-with col6:
-    st.markdown('<div class="login-btn">', unsafe_allow_html=True)
-    if st.button("Login", key="login_btn"):
-        #st.switch_page("pages/01_Login.py")
+with c5:
+    if st.button("Login", use_container_width=True):
         st.session_state.page = "Login"
-    st.markdown('</div>', unsafe_allow_html=True)
+        print(f"Page Login: {st.session_state.page}")
 
-st.markdown('</div>', unsafe_allow_html=True)
+
 st.markdown('<div class="spacer"></div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -335,7 +380,7 @@ st.markdown('<div class="spacer"></div>', unsafe_allow_html=True)
 # ==========================================
 
 if st.session_state.page == "Home":
-
+    print(f"Page Home: {st.session_state.page}")
     st.markdown("""
     <div class='glass-section' style='text-align:center;'>
 
@@ -452,7 +497,7 @@ if st.session_state.page == "Home":
 
 
 elif st.session_state.page == "Features":
-
+    print(f"Page Features: {st.session_state.page}")
     st.title("Platform Features")
 
     st.markdown("""
@@ -634,7 +679,7 @@ elif st.session_state.page == "Features":
 
 
 elif st.session_state.page == "About":
-
+    print(f"Page About: {st.session_state.page}")
     
     st.markdown("""
     <div class='glass-section section'>
@@ -673,7 +718,7 @@ elif st.session_state.page == "About":
 
 
 elif st.session_state.page == "Contact":
-
+    print(f"Page Contact: {st.session_state.page}")
     st.title("Contact Us")
     st.text_input("Name")
     st.text_input("Email")
@@ -683,7 +728,7 @@ elif st.session_state.page == "Contact":
     st.stop()
 
 elif st.session_state.page == "Login":
-
+    print(f"Page Login: {st.session_state.page}")
     col1, col2, col3 = st.columns([1,2,1])
 
     with col2:
