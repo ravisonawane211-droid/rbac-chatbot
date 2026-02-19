@@ -448,6 +448,8 @@ if st.session_state.page == "Home":
     if st.button("🔐 Access the Platform", type="primary"):
         st.session_state.page = "Login"
 
+    st.stop()
+
 
 elif st.session_state.page == "Features":
 
@@ -628,9 +630,7 @@ elif st.session_state.page == "Features":
     </div>
     """, unsafe_allow_html=True)
 
-
-
-
+    st.stop()
 
 
 elif st.session_state.page == "About":
@@ -669,6 +669,7 @@ elif st.session_state.page == "About":
 
     </div>
     """, unsafe_allow_html=True)
+    st.stop()
 
 
 elif st.session_state.page == "Contact":
@@ -678,6 +679,8 @@ elif st.session_state.page == "Contact":
     st.text_input("Email")
     st.text_area("Message")
     st.button("Send Message")
+
+    st.stop()
 
 elif st.session_state.page == "Login":
 
@@ -704,3 +707,4 @@ elif st.session_state.page == "Login":
                     st.error(st.session_state.get("login_success_msg", "Login failed"))
 
         st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
