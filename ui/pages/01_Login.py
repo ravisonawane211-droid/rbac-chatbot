@@ -166,7 +166,7 @@ def submit_login(user_name: str, password: str):
 
     try:
         login_response = requests.post(
-            url="http://localhost:10000/users/login",
+            url="https://rbac-chatbot.onrender.com/users/login",
             json=login_request.model_dump()
         )
         login_response = login_response.json()

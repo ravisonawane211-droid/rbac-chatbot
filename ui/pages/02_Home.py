@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-API_BASE = "http://localhost:10000"
+API_BASE = "https://rbac-chatbot.onrender.com"
 
 # =====================================================
 # 🎨 ENTERPRISE STYLING
