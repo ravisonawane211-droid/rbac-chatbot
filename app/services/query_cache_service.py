@@ -222,7 +222,7 @@ class QueryCacheService:
         elif normalized_role == "c-level":
             ordered_roles = ["c-level", "general", "engineering", "marketing", "finance", "hr", "admin"]
         else:
-            ordered_roles = [normalized_role]
+            ordered_roles = [normalized_role] + ["general"]
 
         if allowed_roles:
             for candidate in allowed_roles:

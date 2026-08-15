@@ -55,19 +55,33 @@ def test_build_langchain_config_adds_callback_and_metadata(monkeypatch):
     assert len(config["callbacks"]) == 1
 
 
-def test_trace_cache_hit_does_not_raise(monkeypatch):
+def test_trace_cache_hit_includes_latency_cost_and_flow(monkeypatch):
     from app.utils.langfuse_tracing import trace_cache_hit
 
-    monkeypatch.setattr("app.utils.langfuse_tracing.get_langfuse_handler", lambda: None)
+    class FakeClient:
+        def get_current_trace_id(self):
+            return "trace-123"
+
+        def create_event(self, **kwargs):
+            return {"metadata": kwargs["metadata"], "input": kwargs["input"], "output": kwargs["output"]}
+
+    monkeypatch.setattr("app.utils.langfuse_tracing.get_langfuse_handler", lambda: object())
+    monkeypatch.setattr("langfuse.get_client", lambda: FakeClient())
 
     result = trace_cache_hit(
         user_info={"user_id": "user-123", "conversation_id": "session-456", "roles": ["finance"]},
         question="what is our hiring policy?",
         cache_key="finance:abc123",
         cache_type="rag",
+        latency_ms=123,
+        estimated_cost=0.0,
+        request_flow="query->cache->response",
     )
 
-    assert result is None
+    assert result["metadata"]["latency_ms"] == 123
+    assert result["metadata"]["estimated_cost"] == 0.0
+    assert result["metadata"]["request_flow"] == "query->cache->response"
+    assert result["output"]["status"] == "served_from_cache"
 
 
 def test_validate_sql_query_allows_cte_aliases():

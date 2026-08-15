@@ -5,7 +5,7 @@ import json
 from app.config.config import get_settings
 from app.services.chat_service import ChatService
 from app.services.query_cache_service import QueryCacheService
-from app.utils.langfuse_tracing import trace_cache_hit
+from app.utils.langfuse_tracing import build_langchain_config
 from app.utils.logger import get_logger
 
 settings = get_settings()
@@ -31,7 +31,7 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
             cached_result = query_cache_service.get(cache_key, cache_type="rag")
             if cached_result:
                 logger.info(f"Cache HIT {cache_key} for question: '{question[:50]}...'")
-                trace_cache_hit(
+                build_langchain_config(
                     user_info=user_info,
                     question=question,
                     cache_key=cache_key,
@@ -80,7 +80,8 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
             cache_result["row_count"] = text_to_sql_resp.get("row_count")
 
         ttl = settings.CACHE_TTL_RAG
-        for cache_key in dict.fromkeys(cache_keys or [query_cache_service.get_key(question, (roles[0] if roles else "general"))]):
-            query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
+        if answer != 'No relevant information was found for your access level. Please refine your query or contact your administrator if you believe this is an error.':
+            for cache_key in dict.fromkeys(cache_keys or [query_cache_service.get_key(question, (roles[0] if roles else "general"))]):
+                query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
 
     return answer, sources, knowledgge_base_resp, text_to_sql_resp
