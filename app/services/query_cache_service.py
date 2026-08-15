@@ -202,10 +202,38 @@ class QueryCacheService:
         return f"embedding:{text_hash}"
     
     def get_key(self, question: str, role: str):
+        normalized_role = (role or "general").strip().lower()
         norm = normalize(question)
-        material = f"{role}|{norm}"
+        material = f"{normalized_role}|{norm}"
         question_hash = self._compute_hash(material)
         return question_hash
+
+    def get_lookup_keys(self, question: str, role: str, allowed_roles: Optional[list[str]] = None) -> list[str]:
+        """Return cache lookup order for a role-aware question.
+
+        For normal users we prefer the exact role then general. For privileged
+        roles such as c-level we also consider other role-specific entries that
+        are part of the shared knowledge model.
+        """
+        normalized_role = (role or "general").strip().lower()
+        ordered_roles = [normalized_role]
+
+        if normalized_role != "general":
+            ordered_roles.append("general")
+
+        if normalized_role == "c-level":
+            shared_roles = ["general", "engineering", "marketing", "finance", "hr", "admin"]
+            for candidate in shared_roles:
+                if candidate not in ordered_roles:
+                    ordered_roles.append(candidate)
+
+        if allowed_roles:
+            for candidate in allowed_roles:
+                candidate_role = (candidate or "general").strip().lower()
+                if candidate_role not in ordered_roles:
+                    ordered_roles.append(candidate_role)
+
+        return [self.get_key(question, candidate_role) for candidate_role in ordered_roles]
 
     def get_rag_key(self, question: str, top_k: int) -> str:
         """Generate cache key for RAG response."""

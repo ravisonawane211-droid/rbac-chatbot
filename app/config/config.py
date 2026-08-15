@@ -15,92 +15,62 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # OpenAI Configuration
-    # openai_api_key: str
-
-    # Google Configuration
     google_api_key: str
-
     openai_api_key: str
 
-    # Langfuse Configuration
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
     langfuse_base_url: str | None = None
 
-    # Collection Settings
     collection_name: str = "RBAC_CHATBOT"
 
-    # Document Processing Settings
     chunk_size: int = 420
-    chunk_overlap: int = int(chunk_size*0.1)
+    chunk_overlap: int = 42
 
-    # Model Configuration
     embedding_model: str = "gemini-embedding-001"
-    #llm_model: str = "gemini-2.5-flash"
     llm_model: str = "gpt-5-mini"
-    #llm_provider: str = "vertex"
     llm_provider: str = "openai"
-
     llm_temperature: float = 0.0
 
-    # Retrieval Settings
     top_k: int = 15
-    sparse_retriever_type:str = "BM25"
-    alpha:float = 0.80
+    sparse_retriever_type: str = "BM25"
+    alpha: float = 0.80
 
-    # Logging
     log_level: str = "INFO"
 
-
-    # API Settings
     api_host: str = "127.0.0.1"
     api_port: int = 8000
-
-    # streamlit 
     ui_port: str = "8002"
 
-    # Application Info
     app_name: str = "rbac_chatbot"
     app_version: str = "0.1.0"
 
-    # Database Settings
-    qdrant_path:str = "./resources/data/qdrant_db_latest/rbac_chatbot.db"
+    qdrant_path: str = "./resources/data/qdrant_db_latest/rbac_chatbot.db"
 
-    #JWT Config
     secret_key: str
     algorithm: str
     access_token_expire_minutes: int
 
-    # Evaluation Service
-    enable_evaluation:bool
-    evaluation_service_url:str
+    enable_evaluation: bool
+    evaluation_service_url: str
     eval_type: str
 
-    # Postgress server path
-    database_url:str
+    database_url: str
+    db_schema_path: str
 
-    # DB Schema
-    db_schema_path:str
-
-
-    # Redis
-    ENABLE_CACHE:bool
-    REDIS_REST_URL:str
-    REDIS_REST_TOKEN:str
+    ENABLE_CACHE: bool
+    REDIS_REST_URL: str
+    REDIS_REST_TOKEN: str
     CACHE_TTL_RAG: int = 86400
 
-    # Reranking
-    ENABLE_RERANKING:bool
-    COHERE_API_KEY:str
-    COHERE_TOP_N:int
-    RERANK_MODEL:str
+    ENABLE_RERANKING: bool
+    COHERE_API_KEY: str
+    COHERE_TOP_N: int
+    RERANK_MODEL: str
 
-    # Chatbot Service URL
-    CHATBOT_SERVICE_URL:str
+    CHATBOT_SERVICE_URL: str
 
-    #Enviornment
-    env:str="dev"
+    env: str = "dev"
 
 
 @lru_cache

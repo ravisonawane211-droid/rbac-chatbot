@@ -1,68 +1,70 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from app.services.auth_service import AuthService
-from app.schemas.user import User
-from app.schemas.login_response import LoginResponse
-from app.schemas.login_request import LoginRequest
+import uuid
+
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app.auth.jwt_bearer import JWTBearer
+from app.config.config import get_settings
 from app.schemas.create_user_request import CreateUserRequest
 from app.schemas.create_user_response import CreateUserResponse
-from app.auth.jwt_bearer import JWTBearer
+from app.schemas.login_request import LoginRequest
+from app.schemas.login_response import LoginResponse
+from app.schemas.user import User
+from app.services.auth_service import AuthService
 from app.services.db_execute_service import DatabaseExecuteService
-from app.utils.token_utils import create_access_token, create_refresh_token, decode_refresh_token
-from app.config.config import get_settings
 from app.utils.logger import get_logger
-import uuid
-import pandas as pd
-
+from app.utils.token_utils import create_access_token, create_refresh_token, decode_refresh_token
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
 settings = get_settings()
 logger = get_logger(__name__)
 auth_scheme = JWTBearer()
 
-@router.post(path="",
-             summary="Create a new user",
-             description="Create a new user with the provided details.")
-def create_user(create_user_request:CreateUserRequest,user_info: dict =Depends(auth_scheme)):
-    """
-    Create a new user.
-    Args:
-        create_user_request (CreateUserRequest): The request containing user details.
-    Returns:
-        CreateUserResponse: The response confirming user creation.
-    """
-    logger.info(f"creating user with user_name {create_user_request.user.user_id} ,requested by {user_info["user_id"]}")
 
-    if create_user_request.user == None:
+@router.post(
+    path="",
+    summary="Create a new user",
+    description="Create a new user with the provided details.",
+)
+def create_user(create_user_request: CreateUserRequest, user_info: dict = Depends(auth_scheme)):
+    """Create a new user with the provided details."""
+    logger.info(
+        f"Creating user with user_name {create_user_request.user.user_id}, requested by {user_info['user_id']}"
+    )
+
+    if create_user_request.user is None:
         raise HTTPException(status_code=400, detail="User details are required")
-    
-    if not create_user_request.user.user_id or not create_user_request.user.password or not create_user_request.user.user_role:
+
+    if (
+        not create_user_request.user.user_id
+        or not create_user_request.user.password
+        or not create_user_request.user.user_role
+    ):
         raise HTTPException(status_code=400, detail="User name, password and role are required")
-    
-    database_execute_service =  DatabaseExecuteService(db_config=settings.database_url)
 
-    user_df = pd.DataFrame([{"user_id": create_user_request.user.user_id,"password": create_user_request.user.password,
-                   "user_role": create_user_request.user.user_role[0]}])
-
-    database_execute_service.save_dataframe_to_table(df=user_df,table_name="users")
+    database_execute_service = DatabaseExecuteService(db_config=settings.database_url)
+    user_df = pd.DataFrame(
+        [{
+            "user_id": create_user_request.user.user_id,
+            "password": create_user_request.user.password,
+            "user_role": create_user_request.user.user_role[0],
+        }]
+    )
+    database_execute_service.save_dataframe_to_table(df=user_df, table_name="users")
 
     logger.info(f"User {create_user_request.user.user_id} created successfully")
 
-    create_user_response = CreateUserResponse(
+    return CreateUserResponse(
         message=f"User {create_user_request.user.user_id} created successfully",
         status="success",
         user_name=create_user_request.user.user_id,
-        user_role=create_user_request.user.user_role
+        user_role=create_user_request.user.user_role,
     )
-    return create_user_response
 
 
 @router.post("/login")
 async def login(request: Request):
-    """
-    User login endpoint.
-    Supports both JSON body and form-encoded login submissions.
-    """
+    """User login endpoint supporting JSON and form-encoded payloads."""
     content_type = request.headers.get("content-type", "")
 
     try:
@@ -85,12 +87,10 @@ async def login(request: Request):
     logger.info(f"Attempting login for user: {user_name}")
 
     authenticated_user: User = _authenticate(user_name, password)
-
     if not authenticated_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     conversation_id = str(uuid.uuid4())
-
     access_token = create_access_token(
         user_id=authenticated_user.user_id,
         employee_id=authenticated_user.employee_id,
@@ -111,7 +111,8 @@ async def login(request: Request):
     )
     authenticated_user.password = None
 
-    login_response = LoginResponse(
+    logger.info(f"User {user_name} logged in successfully")
+    return LoginResponse(
         message=f"Welcome {authenticated_user.user_id}!",
         status="success",
         user=authenticated_user,
@@ -119,8 +120,6 @@ async def login(request: Request):
         refresh_token=refresh_token,
         conversation_id=conversation_id,
     )
-    logger.info(f"User {user_name} logged in successfully")
-    return login_response
 
 
 @router.post("/refresh")
@@ -144,13 +143,14 @@ async def refresh(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="User session could not be validated.")
 
+    conversation_id = decoded.get("conversation_id") or str(uuid.uuid4())
     new_access_token = create_access_token(
         user_id=user.user_id,
         employee_id=user.employee_id,
         password=user.password,
         roles=user.user_role,
         secret_key=settings.secret_key,
-        conversation_id=decoded.get("conversation_id") or str(uuid.uuid4()),
+        conversation_id=conversation_id,
         algorithm=settings.algorithm,
     )
     new_refresh_token = create_refresh_token(
@@ -159,23 +159,17 @@ async def refresh(request: Request):
         password=user.password,
         roles=user.user_role,
         secret_key=settings.secret_key,
-        conversation_id=decoded.get("conversation_id") or str(uuid.uuid4()),
+        conversation_id=conversation_id,
         algorithm=settings.algorithm,
     )
 
     return {
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
-        "conversation_id": decoded.get("conversation_id") or str(uuid.uuid4()),
+        "conversation_id": conversation_id,
     }
 
-def _authenticate(user_name:str, password: str) -> User:
 
+def _authenticate(user_name: str, password: str) -> User:
     auth_service = AuthService()
-
-    user = auth_service.authenticate(user_name, password)
-    return user
-
-
-
-
+    return auth_service.authenticate(user_name, password)

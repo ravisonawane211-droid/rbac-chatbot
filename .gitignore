@@ -211,3 +211,5 @@ __marimo__/
 
 experiments/
 app/context_aware_ui.py
+
+CODE_CLEANUP_PLAN.md

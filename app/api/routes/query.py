@@ -10,15 +10,14 @@ from fastapi.responses import StreamingResponse
 from app.schemas.error_response import ErrorResponse
 from app.schemas.query_request import QueryRequest
 from app.schemas.query_response import QueryResponse
-from app.services.chat_service import ChatService
 from app.auth.jwt_bearer import JWTBearer
-from app.utils.logger import get_logger
-from app.services.evaluation_service import EvaluationService
-from app.schemas.evaluation_request import EvaluationRequest
-from app.services.query_cache_service import QueryCacheService
 from app.config.config import get_settings
+from app.schemas.evaluation_request import EvaluationRequest
+from app.services.chat_service import ChatService
+from app.services.evaluation_service import EvaluationService
+from app.services.query_pipeline_service import execute_query_pipeline
+from app.utils.logger import get_logger
 import threading
-from langchain_core.documents import Document
 
 
 logger = get_logger(__name__)
@@ -48,78 +47,12 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
     try:
         processing_time = (time.time() - start_time) * 1000
 
-        chat_service = ChatService(user_info = user_info)
-        #result = await chat_service.aquery_with_sources(request.question)
-
-        query_cache_service = QueryCacheService(
-            redis_url=settings.REDIS_REST_URL,
-            redis_token=settings.REDIS_REST_TOKEN
+        answer, sources, _, _ = await execute_query_pipeline(
+            question=request.question,
+            user_info=user_info,
         )
 
-        if query_cache_service and query_cache_service.enabled:
-            cache_key = query_cache_service.get_key(request.question, role=user_info["roles"][0])
-            cached_result = query_cache_service.get(cache_key, cache_type="rag")
-            sources = []
-            if cached_result:
-                logger.info(f"Cache HIT {cached_result} for question: '{request.question[:50]}...'")
-                answer = cached_result.get("answer","")
-                sources = cached_result.get("sources",[])
-                sql_result = cached_result.get("sql_result","")
-                
-                # if sources:
-                #     sources = json.loads(sources)
-                    # sources = [
-                    #             Document(page_content=d["page_content"], metadata=d["metadata"])
-                    #             for d in sources
-                    #           ]
-                if sql_result:
-                    sources.extend([{"page_content":sql_result}])
-            else:
-                result = await chat_service.chat(question=request.question, conversation_id=user_info["conversation_id"])
-
-                answer = result["answer"]
-                knowledgge_base_resp = result["knowledgge_base_resp"]
-                text_to_sql_resp = result["text_to_sql_resp"]
-                
-                cache_result = {}
-                sources = []
-                logger.info(f"caching query response in cache..")
-                cache_result["question"] = request.question
-                cache_result["answer"] = answer
-
-                if knowledgge_base_resp:
-                    sources = knowledgge_base_resp["sources"]
-                    sources = json.loads(sources)
-
-                    cache_result = {
-                        **cache_result,
-                        "chunks_used": len(sources),
-                        "sources": sources,
-                        "model": settings.llm_model,
-                        "tool": knowledgge_base_resp["tool"]
-                    }
-                   
-
-                if text_to_sql_resp:
-                    cache_result["sql_query"] = text_to_sql_resp["sql_query"]
-                    cache_result["sql_result"] = text_to_sql_resp["results"]
-                    cache_result["row_count"] = text_to_sql_resp["row_count"]
-                    sources.extend([{"page_content":cache_result["sql_result"]}])
-                
-                ttl = settings.CACHE_TTL_RAG  # Default: 1 hour
-                query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
-
-                logger.info(f"Cache MISS - cached result for '{request.question[:50]}...' (TTL: {ttl}s)")
-        else:
-            result = await chat_service.chat(question=request.question, conversation_id=user_info["conversation_id"])
-
-            answer = result.get("answer", "")
-            sources = result.get("sources", [])
-
-
-        logger.info(
-            f"Query processed in {processing_time:.2f}ms "
-        )
+        logger.info(f"Query processed in {processing_time:.2f}ms ")
 
         
         if settings.enable_evaluation:
