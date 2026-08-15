@@ -209,23 +209,20 @@ class QueryCacheService:
         return question_hash
 
     def get_lookup_keys(self, question: str, role: str, allowed_roles: Optional[list[str]] = None) -> list[str]:
-        """Return cache lookup order for a role-aware question.
+        """Return the safe cache lookup order for RBAC-aware questions.
 
-        For normal users we prefer the exact role then general. For privileged
-        roles such as c-level we also consider other role-specific entries that
-        are part of the shared knowledge model.
+        Normal users only check their own exact-role cache and never inherit another
+        role's cached answer. General users are limited to the shared general cache.
+        C-level users can search the shared executive role set plus general.
         """
         normalized_role = (role or "general").strip().lower()
-        ordered_roles = [normalized_role]
 
-        if normalized_role != "general":
-            ordered_roles.append("general")
-
-        if normalized_role == "c-level":
-            shared_roles = ["general", "engineering", "marketing", "finance", "hr", "admin"]
-            for candidate in shared_roles:
-                if candidate not in ordered_roles:
-                    ordered_roles.append(candidate)
+        if normalized_role == "general":
+            ordered_roles = ["general"]
+        elif normalized_role == "c-level":
+            ordered_roles = ["c-level", "general", "engineering", "marketing", "finance", "hr", "admin"]
+        else:
+            ordered_roles = [normalized_role]
 
         if allowed_roles:
             for candidate in allowed_roles:
