@@ -5,6 +5,7 @@ import json
 from app.config.config import get_settings
 from app.services.chat_service import ChatService
 from app.services.query_cache_service import QueryCacheService
+from app.utils.langfuse_tracing import trace_cache_hit
 from app.utils.logger import get_logger
 
 settings = get_settings()
@@ -30,6 +31,12 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
             cached_result = query_cache_service.get(cache_key, cache_type="rag")
             if cached_result:
                 logger.info(f"Cache HIT {cache_key} for question: '{question[:50]}...'")
+                trace_cache_hit(
+                    user_info=user_info,
+                    question=question,
+                    cache_key=cache_key,
+                    cache_type="rag",
+                )
                 answer = cached_result.get("answer", "")
                 sources = cached_result.get("sources", [])
                 return answer, sources, None, None

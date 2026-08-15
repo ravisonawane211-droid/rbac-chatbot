@@ -55,6 +55,21 @@ def test_build_langchain_config_adds_callback_and_metadata(monkeypatch):
     assert len(config["callbacks"]) == 1
 
 
+def test_trace_cache_hit_does_not_raise(monkeypatch):
+    from app.utils.langfuse_tracing import trace_cache_hit
+
+    monkeypatch.setattr("app.utils.langfuse_tracing.get_langfuse_handler", lambda: None)
+
+    result = trace_cache_hit(
+        user_info={"user_id": "user-123", "conversation_id": "session-456", "roles": ["finance"]},
+        question="what is our hiring policy?",
+        cache_key="finance:abc123",
+        cache_type="rag",
+    )
+
+    assert result is None
+
+
 def test_validate_sql_query_allows_cte_aliases():
     from app.services.sql_validation_service import SQLValidationSerice
 

@@ -61,6 +61,48 @@ def build_langchain_config(
     return config
 
 
+def trace_cache_hit(
+    user_info: Mapping[str, Any] | None = None,
+    question: str | None = None,
+    cache_key: str | None = None,
+    cache_type: str = "rag",
+) -> Any | None:
+    """Emit a Langfuse event when a cached answer is reused."""
+    langfuse_handler = get_langfuse_handler()
+    if not langfuse_handler:
+        return None
+
+    try:
+        from langfuse import get_client
+
+        client = get_client()
+        trace_context = None
+        current_trace_id = client.get_current_trace_id()
+        if current_trace_id:
+            trace_context = {"id": current_trace_id}
+
+        return client.create_event(
+            trace_context=trace_context,
+            name="cache_hit",
+            input={
+                "question": question,
+                "cache_key": cache_key,
+                "cache_type": cache_type,
+                "user": user_info,
+            },
+            output={"status": "served_from_cache"},
+            metadata={
+                "cache_key": cache_key,
+                "cache_type": cache_type,
+                **build_langfuse_metadata(user_info=user_info, route="/cache-hit"),
+            },
+            level="DEFAULT",
+        )
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.warning("Langfuse cache-hit trace unavailable: %s", exc)
+        return None
+
+
 @lru_cache(maxsize=1)
 def get_langfuse_handler():
     """Return a LangChain callback handler when Langfuse is configured."""
