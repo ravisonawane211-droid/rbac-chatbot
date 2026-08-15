@@ -125,3 +125,13 @@ def test_validate_sql_query_with_real_schema_shape_does_not_crash():
         allowed_tables=["employee"],
         user_info={"roles": ["finance"]},
     )
+
+
+def test_database_execute_service_reuses_single_engine():
+    from app.services.db_execute_service import DatabaseExecuteService, get_shared_engine
+
+    service_a = DatabaseExecuteService(db_config="postgresql://user:pass@localhost:5432/testdb")
+    service_b = DatabaseExecuteService(db_config="postgresql://user:pass@localhost:5432/testdb")
+
+    assert service_a.engine is service_b.engine
+    assert service_a.engine is get_shared_engine("postgresql://user:pass@localhost:5432/testdb")

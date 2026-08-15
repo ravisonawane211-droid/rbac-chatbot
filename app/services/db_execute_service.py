@@ -7,8 +7,26 @@ import time
 from typing import Optional
 from typing import Iterator
 from contextlib import contextmanager
+from functools import lru_cache
 
 settings = get_settings()
+
+@lru_cache(maxsize=None)
+def get_shared_engine(db_config: str):
+    """Return a single engine per database URL.
+
+    Supabase session mode imposes a strict connection cap. Creating one SQLAlchemy
+    engine per service instance multiplies the number of pooled connections and can
+    quickly exhaust the session limit even when each individual query is valid.
+    """
+    return create_engine(
+        url=db_config,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=0,
+        pool_timeout=30,
+        pool_recycle=1800,
+    )
 
 class DatabaseExecuteService:
 
@@ -16,14 +34,7 @@ class DatabaseExecuteService:
         self.logger = get_logger(__name__)
 
         self.timeout_seconds = timeout_seconds
-
-        self.engine = create_engine(
-                url=db_config,
-                pool_pre_ping=True,
-                pool_size=3,
-                max_overflow=1,
-                pool_recycle=1800,
-            )
+        self.engine = get_shared_engine(db_config or settings.database_url)
 
         self.logger.info(f"DatabaseExecutorService initialised with timeout_seconds {self.timeout_seconds}")
 
