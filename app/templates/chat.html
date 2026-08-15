@@ -162,7 +162,7 @@
 
       setAgentStatus('Processing...');
 
-      fetchWithAutoRefresh('/query/stream', {
+      fetchWithAutoRefresh('/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,59 +177,19 @@
         })
       })
       .then(async (response) => {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let answerText = '';
+        const data = await response.json();
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const events = buffer.split('\n\n');
-          buffer = events.pop() || '';
-
-          for (const eventText of events) {
-            const lines = eventText.split('\n');
-            const eventName = lines.find(line => line.startsWith('event:'))?.replace('event:', '').trim();
-            const dataLine = lines.find(line => line.startsWith('data:'))?.replace('data:', '').trim();
-            if (!dataLine) continue;
-
-            try {
-              const parsed = JSON.parse(dataLine);
-
-              if (eventName === 'progress') {
-                setAgentStatus(parsed.message || 'Processing...');
-              }
-
-              if (eventName === 'chunk') {
-                answerText += parsed.text || '';
-              }
-
-              if (eventName === 'done') {
-                const finalAnswer = parsed.answer || answerText || 'No answer returned.';
-                const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
-                history.push({ role: 'assistant', content: finalAnswer });
-                localStorage.setItem(chatHistoryKey, JSON.stringify(history));
-                bubble.textContent = finalAnswer;
-                bubble.classList.remove('status-bubble');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-              }
-
-              if (eventName === 'error') {
-                const msg = parsed.detail || 'Something went wrong while querying the assistant.';
-                bubble.textContent = 'Error: ' + msg;
-                const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
-                history.push({ role: 'assistant', content: 'Error: ' + msg });
-                localStorage.setItem(chatHistoryKey, JSON.stringify(history));
-                setAgentStatus('');
-              }
-            } catch (error) {
-              // Ignore malformed event payloads.
-            }
-          }
+        if (!response.ok) {
+          throw new Error(data.detail || 'Something went wrong while querying the assistant.');
         }
+
+        const finalAnswer = data.answer || 'No answer returned.';
+        const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+        history.push({ role: 'assistant', content: finalAnswer });
+        localStorage.setItem(chatHistoryKey, JSON.stringify(history));
+        bubble.textContent = finalAnswer;
+        bubble.classList.remove('status-bubble');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       })
       .catch((error) => {
         const msg = error.message || 'Something went wrong while querying the assistant.';
