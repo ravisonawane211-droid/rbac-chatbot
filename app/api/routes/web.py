@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
 router = APIRouter(tags=["Web"])
-project_root = Path(__file__).resolve().parents[2]
+project_root = Path(__file__).resolve().parents[3]
 templates = Jinja2Templates(directory=str(project_root / "app" / "templates"))
 
 
