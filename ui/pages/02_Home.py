@@ -18,7 +18,6 @@ st.set_page_config(
     layout="wide"
 )
 
-API_BASE = "https://rbac-chatbot.onrender.com"
 
 # =====================================================
 # 🎨 ENTERPRISE STYLING
@@ -108,6 +107,7 @@ if not st.session_state.get("logged_in"):
 user = st.session_state.get("user", {})
 logged_in_user = user.get("user_id", "User")
 roles_list = user.get("user_role", [])
+employee_id = user.get("employee_id", "N/A")
 role = roles_list[0].lower() if roles_list else "general"
 
 col1, col2 = st.columns([8, 2])
@@ -116,7 +116,7 @@ with col1:
     st.markdown("### 🏦 Fin Assist AI Platform")
 
 with col2:
-    st.markdown(f"**👤 {logged_in_user}**  \n**Role:** {role}")
+    st.markdown(f"**User: {logged_in_user}** \n\n**Employee Id:** {employee_id} \n\n**Role:** {role}")
     if st.button("Logout"):
         st.session_state.clear()
         st.switch_page("00_Landing.py")
@@ -145,11 +145,11 @@ def call_query_api(question: str):
         headers["Authorization"] = f"Bearer {token}"
         #headers["Authorization"] = token
 
-    queryRequest = QueryRequest(question=question,include_sources=False,enable_evaluation=True,
+    queryRequest = QueryRequest(question=question,include_sources=False,enable_evaluation=settings.enable_evaluation,
     user_name=logged_in_user,conversation_id=st.session_state.get("conversation_id"))
 
     try:
-        query_response = requests.post(f"{API_BASE}/query", json=queryRequest.model_dump(), headers=headers)
+        query_response = requests.post(f"{settings.CHATBOT_SERVICE_URL}/query", json=queryRequest.model_dump(), headers=headers)
         query_response.raise_for_status()
         response = query_response.json()
         answer = response.get("answer", "").replace("\n", "  \n")  # Preserve line breaks for markdown
@@ -168,7 +168,7 @@ def upload_document_api(file, role: str):
     files = {"file": (file.name, file, file.type)}
     data = {"role": role}
     try:
-        resp = requests.post(f"{API_BASE}/documents/upload", files=files, params=data, headers=headers, timeout=60)
+        resp = requests.post(f"{settings.CHATBOT_SERVICE_URL}/documents/upload", files=files, params=data, headers=headers, timeout=60)
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -187,10 +187,10 @@ def create_user_api(username: str, password: str, role: str):
     try:
         # Backend endpoint for user creation may not exist; try /users/create then /users
         try:
-            resp = requests.post(f"{API_BASE}/users", json=create_user_request.model_dump(), headers=headers, timeout=15)
+            resp = requests.post(f"{settings.CHATBOT_SERVICE_URL}/users", json=create_user_request.model_dump(), headers=headers, timeout=15)
         except requests.exceptions.RequestException:
             logger.error(f"error while saving user {username}")
-            resp = requests.post(f"{API_BASE}/users", json=create_user_request.model_dump(), headers=headers, timeout=30)
+            resp = requests.post(f"{settings.CHATBOT_SERVICE_URL}/users", json=create_user_request.model_dump(), headers=headers, timeout=30)
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -205,7 +205,7 @@ def get_evaluation_metrics_dashboard(app_name:str):
     if token:
         headers["Authorization"] = f"Bearer {token}"
     try:
-        resp = requests.get(f"{API_BASE}/dashboard/metrics/{app_name}", headers=headers, timeout=30)
+        resp = requests.get(f"{settings.CHATBOT_SERVICE_URL}/dashboard/metrics/{app_name}", headers=headers, timeout=30)
         resp.raise_for_status()
         if resp.status_code != 200:
             logger.error("Error fetching evaluation metrics")
@@ -227,7 +227,7 @@ def create_app_config_api(enable_eval:str, eval_type: str):
 
     try:
         try:
-            resp = requests.post(f"{API_BASE}/dashboard/config", json=save_app_config_request.model_dump(), 
+            resp = requests.post(f"{settings.CHATBOT_SERVICE_URL}/dashboard/config", json=save_app_config_request.model_dump(), 
                                  headers=headers, timeout=60)
         except requests.exceptions.RequestException:
             logger.error("error while saving app coniguration")
@@ -264,27 +264,27 @@ with tab1:
         with st.chat_message(msg["role"]):
             if msg["role"] == "assistant":
                 st.markdown(
-                    f"<div style='color:white;font-weight:700;'>🤖 {msg['content']}</div>",
+                    f"<div style='color:white;font-weight:500;'>{msg['content']}</div>",
                     unsafe_allow_html=True
                 )
             else:
                 st.markdown(f"👤 {msg['content']}")
 
-    if prompt := st.chat_input("Ask FinSolve AI..."):
+    if prompt := st.chat_input("Ask FinAssist AI..."):
 
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("user"):
-            st.markdown(f"👤 {prompt}")
+            st.markdown(f"{prompt}")
 
         with st.chat_message("assistant"):
             thinking = st.empty()
-            thinking.markdown("🤖 *FinSolve AI is analyzing your request...*")
+            thinking.markdown("*FinSolve AI is analyzing your request...*")
             answer = call_query_api(prompt)
             thinking.empty()
 
             st.markdown(
-                f"<div style='color:white;font-weight:700;'>🤖 {answer}</div>",
+                f"<div style='color:white;font-weight:500;'> {answer}</div>",
                 unsafe_allow_html=True
             )
 
@@ -379,7 +379,7 @@ if role == "c-level":
                                 "Answer": metric.get("answer", ""),
                                 "Metric Name": metric.get("metric_name", ""),
                                 "Score": score,
-                                "Status": metric.get("eval_status","red"),
+                                "Status": metric.get("eval_status","red")
                             })
                 display_df = pd.DataFrame(rows)
 

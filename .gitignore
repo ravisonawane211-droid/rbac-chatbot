@@ -210,3 +210,4 @@ __marimo__/
 .env
 
 experiments/
+app/context_aware_ui.py

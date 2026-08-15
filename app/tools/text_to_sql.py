@@ -2,21 +2,24 @@ from langchain_core.tools import tool
 from app.services.sql_processing_service import SQLProcessingService
 from typing import List,Dict, Any
 from app.utils.logger import get_logger
+from app.utils.util import get_current_user
 
 
 logger = get_logger(__name__)
 
-@tool("text_to_sql",description="This tool takes question and gnerates to sql query and executes it and return result")
-def text_to_sql(question: str, roles: List[str]) -> Dict[str, Any]:
+@tool("text_to_sql",description="This tool takes question , user_info and generates to sql query and executes it and return result")
+def text_to_sql(question: str) -> Dict[str, Any]:
     """
     Executes a natural language query against Postgres using the internal SQL service.
     The service loads schema from JSON, generates SQL, validates it, and runs it safely.
-    Input: natural language question.
+    question: natural language question.
     Output: dict with sql_query, results, row_count
     """
     logger.info(f"inside text_to_sql tool with user_query: {question}")
 
-    sql_processing_service = SQLProcessingService(user_query=question , roles=roles)
+    user_info = get_current_user()
+    
+    sql_processing_service = SQLProcessingService(user_query=question , user_info=user_info)
 
     sql_result = sql_processing_service.process_user_query()
 

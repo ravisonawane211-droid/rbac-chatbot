@@ -58,3 +58,6 @@ pymupdf4llm
 
 #ollama
 langchain_ollama
+
+# Observability / tracing
+langfuse

@@ -12,4 +12,5 @@ class LoginResponse(BaseModel):
     status: Literal["success", "failure"] = Field(..., description="The login status of the user")
     user: User = Field(description="The logged-in user details")
     access_token: str = Field(..., description="JWT access token for authenticated requests")
+    refresh_token: str = Field(..., description="JWT refresh token used to renew the access token")
     conversation_id:str = Field(...,description="Conversation_Id for authenticated users during Q/A interaction.")

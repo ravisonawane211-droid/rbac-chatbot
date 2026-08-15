@@ -40,18 +40,33 @@ class KnowledgeBaseServie:
     def __init__(self,vector_store: VectorStoreService | None = None, roles:list[str]=[]):
         self.logger = get_logger(__name__)
 
+        self.roles = roles
         self.vector_store = vector_store or VectorStoreService()
         self.sparse_vector_store = SparseVectorService(settings.sparse_retriever_type)
 
-        self.dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
+        filtered_docs = []
+        retrievers= []
+        weights = []
 
         source_docs = get_qdrant_documents()
-        
-        self.sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=source_docs)
 
-        self.hybrid_retriever = EnsembleRetriever(retrievers=[self.dense_retriever, 
-                                                              self.sparse_retriever],
-                                                              weights=[settings.alpha,1 - settings.alpha])
+
+        if roles and "c-level" not in roles:
+            allowed_roles = list(set(roles + ["general"]))
+            filtered_docs = [doc for doc in source_docs if doc.metadata.get("role", []) and any(role in doc.metadata["role"] for role in allowed_roles)]
+
+        dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
+        weights.append(settings.alpha)
+
+        retrievers.append(dense_retriever)
+
+        if filtered_docs:
+            sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=filtered_docs, roles=roles)
+            retrievers.append(sparse_retriever)
+            weights.append(1 - settings.alpha)
+
+        self.hybrid_retriever = EnsembleRetriever(retrievers=retrievers,
+                                                              weights=weights)
         self.logger.info("KnowledgeBaseServie initialized")
 
     
@@ -61,6 +76,10 @@ class KnowledgeBaseServie:
             self.logger.info(f"searching knowledge for user query: {question}")
 
             source_docs = self.hybrid_retriever.invoke(question)
+
+            if not source_docs:
+                self.logger.info(f"No accessible documents found for question: {question} with your role: {self.roles}: ")
+                return []
 
             if settings.ENABLE_RERANKING:
                 source_docs = self.rerank_docs(question=question, docs = source_docs)

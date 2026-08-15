@@ -155,21 +155,16 @@ class VectorStoreService:
         logger.debug(f"Found {len(results)} results with scores")
         return results
 
-    def get_dense_retriever(self, k: int | None = None, roles: list[str] = []) -> Any:
-        """Get a retriever for the vector store.
-
-        Args:
-            k: Number of documents to retrieve
-
-        Returns:
-            LangChain retriever object
-        """
-        logger.info("retriving documents using retriever")
+    def get_dense_retriever(self, k: int | None = None, roles: list[str] = None):
 
         k = k or settings.top_k
-        
+        roles = roles or []
+
+        search_kwargs = {"k": k}
+
         if roles and "c-level" not in roles:
             allowed_roles = list(set(roles + ["general"]))
+
             qdrant_filter = Filter(
                 should=[
                     FieldCondition(
@@ -179,16 +174,13 @@ class VectorStoreService:
                     for role in allowed_roles
                 ]
             )
-            retriever = self.vector_store.as_retriever(
+
+            search_kwargs["filter"] = qdrant_filter
+
+        retriever = self.vector_store.as_retriever(
             search_type="similarity",
-            k = k,
-            filter = qdrant_filter
-            )
-            retriever._get_relevant_documents
-        else:
-            retriever = self.vector_store.as_retriever(
-            search_type="similarity",
-            k = k)
+            search_kwargs=search_kwargs
+        )
 
         return retriever
 

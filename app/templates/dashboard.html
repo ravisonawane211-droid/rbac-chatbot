@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Dashboard{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+  <div class="glass-card p-4">
+    <h2 class="text-white mb-3">Evaluation Dashboard</h2>
+    <div id="dashboardAlert" class="alert d-none" role="alert"></div>
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Metric</th>
+            <th>Score</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="dashboardTableBody">
+          <tr>
+            <td colspan="4" class="text-muted">Loading metrics...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(function () {
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    async function refreshAccessToken() {
+      const refreshToken = localStorage.getItem('refreshToken') || getCookie('refresh_token');
+      if (!refreshToken) return null;
+
+      const response = await fetch('/users/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      localStorage.setItem('accessToken', data.access_token);
+      localStorage.setItem('refreshToken', data.refresh_token);
+      document.cookie = 'access_token=' + encodeURIComponent(data.access_token) + '; path=/; SameSite=Lax';
+      document.cookie = 'refresh_token=' + encodeURIComponent(data.refresh_token) + '; path=/; SameSite=Lax';
+      return data.access_token;
+    }
+
+    const token = localStorage.getItem('accessToken') || getCookie('access_token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    function loadDashboard() {
+      const currentToken = localStorage.getItem('accessToken') || getCookie('access_token');
+
+      $.ajax({
+        url: '/dashboard/metrics/rbac_chatbot',
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + currentToken },
+        success: function (response) {
+          const rows = response.metrics || [];
+          if (!rows.length) {
+            $('#dashboardTableBody').html('<tr><td colspan="4" class="text-muted">No evaluation metrics available yet.</td></tr>');
+            return;
+          }
+
+          const html = rows.map(metric => {
+            const score = metric.metric_value ?? 0;
+            const status = metric.eval_status || 'Unknown';
+            return `
+              <tr>
+                <td>${metric.question || '-'}</td>
+                <td>${metric.metric_name || '-'}</td>
+                <td>${score}</td>
+                <td><span class="badge ${status === 'Green' ? 'bg-success' : 'bg-danger'}">${status}</span></td>
+              </tr>
+            `;
+          }).join('');
+
+          $('#dashboardTableBody').html(html);
+        },
+        error: async function (xhr) {
+          if (xhr.status === 403) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+              $.ajax({
+                url: '/dashboard/metrics/rbac_chatbot',
+                method: 'GET',
+                headers: { Authorization: 'Bearer ' + newToken },
+                success: function (response) {
+                  const rows = response.metrics || [];
+                  if (!rows.length) {
+                    $('#dashboardTableBody').html('<tr><td colspan="4" class="text-muted">No evaluation metrics available yet.</td></tr>');
+                    return;
+                  }
+
+                  const html = rows.map(metric => {
+                    const score = metric.metric_value ?? 0;
+                    const status = metric.eval_status || 'Unknown';
+                    return `
+                      <tr>
+                        <td>${metric.question || '-'}</td>
+                        <td>${metric.metric_name || '-'}</td>
+                        <td>${score}</td>
+                        <td><span class="badge ${status === 'Green' ? 'bg-success' : 'bg-danger'}">${status}</span></td>
+                      </tr>
+                    `;
+                  }).join('');
+
+                  $('#dashboardTableBody').html(html);
+                },
+                error: function (retryXhr) {
+                  const msg = retryXhr.responseJSON?.detail || 'Failed to fetch dashboard metrics.';
+                  $('#dashboardAlert').removeClass('d-none').addClass('alert-danger').text(msg);
+                }
+              });
+              return;
+            }
+          }
+
+          const msg = xhr.responseJSON?.detail || 'Failed to fetch dashboard metrics.';
+          $('#dashboardAlert').removeClass('d-none').addClass('alert-danger').text(msg);
+        }
+      });
+    }
+
+    loadDashboard();
+  });
+</script>
+{% endblock %}

@@ -1,6 +1,8 @@
 """Query endpoints for RAG Q&A."""
 
+import asyncio
 import time
+import json
 
 from fastapi import APIRouter, HTTPException,Depends
 from fastapi.responses import StreamingResponse
@@ -16,7 +18,6 @@ from app.schemas.evaluation_request import EvaluationRequest
 from app.services.query_cache_service import QueryCacheService
 from app.config.config import get_settings
 import threading
-import json
 from langchain_core.documents import Document
 
 
@@ -24,6 +25,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/query", tags=["Query"])
 settings = get_settings()
 auth_scheme = JWTBearer()
+
 
 @router.post(
     "",
@@ -46,7 +48,7 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
     try:
         processing_time = (time.time() - start_time) * 1000
 
-        chat_service = ChatService(roles = user_info["roles"])
+        chat_service = ChatService(user_info = user_info)
         #result = await chat_service.aquery_with_sources(request.question)
 
         query_cache_service = QueryCacheService(
@@ -103,7 +105,7 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
                     cache_result["sql_result"] = text_to_sql_resp["results"]
                     cache_result["row_count"] = text_to_sql_resp["row_count"]
                     sources.extend([{"page_content":cache_result["sql_result"]}])
-
+                
                 ttl = settings.CACHE_TTL_RAG  # Default: 1 hour
                 query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
 
@@ -111,24 +113,20 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
         else:
             result = await chat_service.chat(question=request.question, conversation_id=user_info["conversation_id"])
 
-            answer = result["answer"]
-            sources = result["sources"]
+            answer = result.get("answer", "")
+            sources = result.get("sources", [])
 
 
         logger.info(
             f"Query processed in {processing_time:.2f}ms "
         )
 
-        #app_config = get_app_config()
-
-        #logger.info(f"retrived app config : {app_config}")
-
-        #if app_config.enable_eval == "Yes":
-        if request.enable_evaluation:
+        
+        if settings.enable_evaluation:
             evaluation_service = EvaluationService()
 
             evaluation_request = _get_evaluation_request(conversation_id=request.conversation_id,
-                                    question=request.question,answer=answer,sources=sources)
+                                    question=request.question,answer=answer,sources=sources, user_id=user_info["user_id"])
             
             threading.Thread(
                 target=evaluation_service.send_for_evaluation,
@@ -165,20 +163,37 @@ async def query_stream(request: QueryRequest,user_info: dict =Depends(auth_schem
     logger.info(f"Streaming query received: {request.question[:100]} by {user_info["user_id"]}")
 
     try:
-        chat_service = ChatService(roles=user_info["roles"])
+        chat_service = ChatService(user_info=user_info)
 
         async def generate():
-            """Generate streaming response."""
+            """Generate incremental status and answer updates."""
             try:
-                for chunk in chat_service.aquery_with_sources(request.question):
-                    yield chunk
+                yield "event: progress\ndata: {\"message\": \"Thinking...\"}\n\n"
+                await asyncio.sleep(0.2)
+
+                yield "event: progress\ndata: {\"message\": \"Checking the relevant knowledge base...\"}\n\n"
+                await asyncio.sleep(0.2)
+
+                yield "event: progress\ndata: {\"message\": \"Preparing the final answer...\"}\n\n"
+                await asyncio.sleep(0.1)
+
+                result = await chat_service.chat(question=request.question, conversation_id=user_info.get("conversation_id"))
+                answer = result.get("answer", "") or "No answer returned."
+
+                for i in range(0, len(answer), 35):
+                    chunk = answer[i:i+35]
+                    yield f"event: chunk\ndata: {json.dumps({'text': chunk})}\n\n"
+                    await asyncio.sleep(0.04)
+
+                yield f"event: done\ndata: {json.dumps({'answer': answer, 'sources': result.get('sources', [])})}\n\n"
             except Exception as e:
                 logger.error(f"Error in stream: {e}")
-                yield f"\n\nError: {str(e)}"
+                yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
 
         return StreamingResponse(
             generate(),
-            media_type="text/plain",
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
         )
 
     except Exception as e:
@@ -188,7 +203,7 @@ async def query_stream(request: QueryRequest,user_info: dict =Depends(auth_schem
             detail=f"Error processing query: {str(e)}",
         )
     
-def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources:list):
+def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources:list, user_id:str):
     contexts = [source.get("page_content","") for source in sources]
     
     metadata = {
@@ -203,6 +218,7 @@ def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources
     eval_request = EvaluationRequest(project_id = settings.app_name,environment = settings.env,
                                      request_id = conversation_id,contexts = contexts,
                                      question = question,answer = answer,
-                                     metadata = metadata, eval_type="Ragas"
+                                     metadata = metadata, eval_type=settings.eval_type,
+                                     user_id = user_id
                                      )
     return eval_request

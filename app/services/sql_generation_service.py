@@ -16,12 +16,12 @@ class SQLGenerationService:
         self.logger.info(f"SQLGenerationService initialized with {llm_provider} {llm_model}")
 
 
-    def generate_sql_query(self, user_query: str, entities: Dict[str,Any], schema_components: Dict[str, Any]) -> str:
+    def generate_sql_query(self, user_query: str, entities: Dict[str,Any], schema_components: Dict[str, Any], user_info: dict) -> str:
         
         try:
             self.logger.info(f"Generating SQL for query: {user_query}")
             
-            prompt = self._build_sql_prompt(user_query=user_query, entities= entities, schema_components=schema_components)
+            prompt = self._build_sql_prompt(user_query=user_query, entities= entities, schema_components=schema_components, user_info=user_info)
 
             self.logger.info(f"Final prompt generated : {prompt}")
 
@@ -32,6 +32,9 @@ class SQLGenerationService:
 
             if not sql_query:
                 raise Exception("Failed to extract valid SQL query from LLM response")
+            
+            if "Error:" in sql_query:
+                raise Exception(f"LLM Error: {sql_query}")
             
             return sql_query
         
@@ -66,7 +69,7 @@ class SQLGenerationService:
             raise e
         
 
-    def _build_sql_prompt(self,user_query: str, entities: Dict[str,Any], schema_components: Dict[str, Any]):
+    def _build_sql_prompt(self,user_query: str, entities: Dict[str,Any], schema_components: Dict[str, Any], user_info: dict):
 
         self.logger.info(f"Builing sql prompt for user_query: {user_query}")
 
@@ -80,7 +83,8 @@ class SQLGenerationService:
             user_query=user_query,
             schema=schema,
             entities=entities,
-            joins=joins)
+            joins=joins,
+            user_info=user_info)
         
         self.logger.info(f"SQL generation prompt generated: {prompt}")
 

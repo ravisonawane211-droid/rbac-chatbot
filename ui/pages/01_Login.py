@@ -2,9 +2,11 @@ import streamlit as st
 import requests
 from app.schemas.login_request import LoginRequest
 from app.utils.logger import get_logger
-import base64
+from app.config.config import get_settings
 
 logger = get_logger(__name__)
+settings = get_settings()
+
 
 st.set_page_config(
     page_title="FinSolve Technologies | Secure Login",
@@ -166,7 +168,7 @@ def submit_login(user_name: str, password: str):
 
     try:
         login_response = requests.post(
-            url="https://rbac-chatbot.onrender.com/users/login",
+            url=f"{settings.CHATBOT_SERVICE_URL}/users/login",
             json=login_request.model_dump()
         )
         login_response = login_response.json()

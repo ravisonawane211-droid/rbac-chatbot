@@ -13,6 +13,8 @@ from functools import lru_cache
 from langchain_core.documents import Document
 from app.agents.fin_solve_agent import fin_solve_agent
 import json
+from app.utils.util import set_current_user
+from app.utils.langfuse_tracing import build_langchain_config
 
 settings = get_settings()
 
@@ -44,42 +46,43 @@ def get_qdrant_documents():
 
 
 class ChatService:
-    def __init__(self, vector_store: VectorStoreService | None = None, roles:list[str]=[]):
+    def __init__(self, vector_store: VectorStoreService | None = None, user_info: dict = {}):
         self.logger = get_logger(__name__)
+        self.user_info = user_info
+        self.roles = user_info.get("roles", [])
+        # self.vector_store = vector_store or VectorStoreService()
+        # self.sparse_vector_store = SparseVectorService(settings.sparse_retriever_type)
 
-        self.roles = roles
-        self.vector_store = vector_store or VectorStoreService()
-        self.sparse_vector_store = SparseVectorService(settings.sparse_retriever_type)
+        # self.dense_retriever = self.vector_store.get_dense_retriever(roles=self.roles)
 
-        self.dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
-
-        source_docs = get_qdrant_documents()
+        # source_docs = get_qdrant_documents()
         
-        self.sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=source_docs)
+        # self.sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=source_docs, roles=self.roles)
 
-        self.hybrid_retriever = EnsembleRetriever(retrievers=[self.dense_retriever, 
-                                                              self.sparse_retriever],
-                                                              weights=[settings.alpha,1 - settings.alpha])
-        self.llm = ChatGoogleGenerativeAI(model=settings.llm_model,
-                                          temperature=settings.llm_temperature)
-          # Create prompt template
-        self.prompt = ChatPromptTemplate.from_template(RAG_PROMPT)
+        # self.hybrid_retriever = EnsembleRetriever(retrievers=[self.dense_retriever, 
+        #                                                       self.sparse_retriever],
+        #                                                       weights=[settings.alpha,1 - settings.alpha])
+        # self.llm = ChatGoogleGenerativeAI(model=settings.llm_model,
+        #                                   temperature=settings.llm_temperature)
+        #   # Create prompt template
+        # self.prompt = ChatPromptTemplate.from_template(RAG_PROMPT)
 
-        # Build LCEL chain
-        self.chain = (
-            {
-                "context": self.hybrid_retriever | format_docs,
-                "question": RunnablePassthrough()
-            }
-            | self.prompt
-            | self.llm
-            | StrOutputParser()
-        )
+        # # Build LCEL chain
+        # self.chain = (
+        #     {
+        #         "context": self.hybrid_retriever | format_docs,
+        #         "question": RunnablePassthrough()
+        #     }
+        #     | self.prompt
+        #     | self.llm
+        #     | StrOutputParser()
+        # )
 
-        self.logger.info(
-            f"RAGChain initialized with model={settings.llm_model}, "
-            f"retrieval_k={settings.top_k}"
-        )
+        # self.logger.info(
+        #     f"RAGChain initialized with model={settings.llm_model}, "
+        #     f"retrieval_k={settings.top_k}"
+        # )
+        self.logger.info(f"ChatService initialized with roles: {self.roles}")
 
     async def aquery_with_sources(self, question: str) -> dict:
         """Execute an async RAG query and return sources.
@@ -123,11 +126,18 @@ class ChatService:
             
             answer = ""
 
-            config = {"configurable": {"thread_id": conversation_id}}
+            config = build_langchain_config(
+                user_info=self.user_info,
+                route="/chat",
+                model=settings.llm_model,
+                base_config={"configurable": {"thread_id": conversation_id}},
+            )
+
+            set_current_user(self.user_info)
 
             response = await fin_solve_agent.ainvoke(input={"messages":[{"role": "user", "content": question}],
                                                             "rag_response":{}},
-                                    context={"question": question,"roles": self.roles},
+                                    context={"question": question, "user_info": self.user_info},
                                     config=config)
             
             if response:
@@ -141,8 +151,19 @@ class ChatService:
 
             self.logger.info(f"received response from agent: {answer} for user query: {question}")
 
+            sources = []
+            if knowledgge_base_resp and knowledgge_base_resp.get("sources") is not None:
+                try:
+                    sources = json.loads(knowledgge_base_resp["sources"])
+                except (TypeError, ValueError):
+                    sources = knowledgge_base_resp.get("sources", [])
+
+            if text_to_sql_resp and text_to_sql_resp.get("results") is not None:
+                sources.append({"page_content": text_to_sql_resp.get("results")})
+
             return {
                     "answer": answer,
+                    "sources": sources,
                     "knowledgge_base_resp": knowledgge_base_resp,
                     "text_to_sql_resp": text_to_sql_resp
                 }

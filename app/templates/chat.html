@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Chat{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="glass-card chat-shell">
+        <div class="d-flex justify-content-between align-items-center mb-3 gap-3">
+          <h3 class="text-white mb-0">Assistant Chat</h3>
+        </div>
+
+        <div id="chatMessages" class="chat-messages">
+          <div class="message assistant">
+            <div class="bubble">Hello! Ask me anything about your company knowledge base.</div>
+          </div>
+        </div>
+
+        <form id="chatForm" class="mt-3">
+          <div class="input-group input-group-lg">
+            <input id="chatInput" type="text" class="form-control" placeholder="Ask FinAssist AI..." required />
+            <button class="btn btn-primary" type="submit">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="glass-card p-4">
+        <h5 class="text-white">Quick actions</h5>
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-outline-light text-start" data-question="What are the employee policies?">Employee policies</button>
+          <button class="btn btn-outline-light text-start" data-question="Summarize the latest finance report.">Finance summary</button>
+          <button class="btn btn-outline-light text-start" data-question="What are the engineering team guidelines?">Engineering guidance</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    let user = {};
+    try {
+      user = JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (error) {
+      user = {};
+    }
+
+    const token = localStorage.getItem('accessToken') || getCookie('access_token');
+
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const chatHistoryKey = 'chatHistory';
+    const savedMessages = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+
+    function setAgentStatus(message) {
+      const activeBubble = chatMessages.querySelector('.message.assistant:last-child .bubble');
+      if (!activeBubble) return;
+
+      if (message) {
+        activeBubble.textContent = message;
+        activeBubble.classList.add('status-bubble');
+      } else {
+        activeBubble.classList.remove('status-bubble');
+      }
+    }
+
+    function appendMessage(role, text) {
+      const message = document.createElement('div');
+      message.className = 'message ' + role;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+
+      message.appendChild(bubble);
+      chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function renderStoredMessages() {
+      chatMessages.innerHTML = '';
+      if (!savedMessages.length) {
+        appendMessage('assistant', 'Hello! Ask me anything about your company knowledge base.');
+        return;
+      }
+      savedMessages.forEach(msg => {
+        appendMessage(msg.role, msg.content);
+      });
+    }
+
+    async function fetchWithAutoRefresh(url, options = {}) {
+      let response = await fetch(url, options);
+
+      if (response.status !== 403) {
+        return response;
+      }
+
+      const refreshToken = localStorage.getItem('refreshToken') || getCookie('refresh_token');
+      if (!refreshToken) {
+        return response;
+      }
+
+      const refreshResponse = await fetch('/users/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!refreshResponse.ok) {
+        return response;
+      }
+
+      const refreshData = await refreshResponse.json();
+      localStorage.setItem('accessToken', refreshData.access_token);
+      localStorage.setItem('refreshToken', refreshData.refresh_token);
+      document.cookie = 'access_token=' + encodeURIComponent(refreshData.access_token) + '; path=/; SameSite=Lax';
+      document.cookie = 'refresh_token=' + encodeURIComponent(refreshData.refresh_token) + '; path=/; SameSite=Lax';
+
+      const updatedHeaders = new Headers(options.headers || {});
+      updatedHeaders.set('Authorization', 'Bearer ' + refreshData.access_token);
+
+      return fetch(url, { ...options, headers: updatedHeaders });
+    }
+
+    renderStoredMessages();
+
+    chatForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const question = chatInput.value.trim();
+      if (!question) return;
+
+      const conversationHistory = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+      conversationHistory.push({ role: 'user', content: question });
+      localStorage.setItem(chatHistoryKey, JSON.stringify(conversationHistory));
+      appendMessage('user', question);
+      chatInput.value = '';
+
+      const assistantPlaceholder = document.createElement('div');
+      assistantPlaceholder.className = 'message assistant';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = '';
+      assistantPlaceholder.appendChild(bubble);
+      chatMessages.appendChild(assistantPlaceholder);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      setAgentStatus('Processing...');
+
+      fetchWithAutoRefresh('/query/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          question: question,
+          include_sources: true,
+          enable_evaluation: false,
+          user_name: user.user_id,
+          conversation_id: localStorage.getItem('conversationId') || crypto.randomUUID()
+        })
+      })
+      .then(async (response) => {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let answerText = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+
+          for (const eventText of events) {
+            const lines = eventText.split('\n');
+            const eventName = lines.find(line => line.startsWith('event:'))?.replace('event:', '').trim();
+            const dataLine = lines.find(line => line.startsWith('data:'))?.replace('data:', '').trim();
+            if (!dataLine) continue;
+
+            try {
+              const parsed = JSON.parse(dataLine);
+
+              if (eventName === 'progress') {
+                setAgentStatus(parsed.message || 'Processing...');
+              }
+
+              if (eventName === 'chunk') {
+                answerText += parsed.text || '';
+              }
+
+              if (eventName === 'done') {
+                const finalAnswer = parsed.answer || answerText || 'No answer returned.';
+                const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+                history.push({ role: 'assistant', content: finalAnswer });
+                localStorage.setItem(chatHistoryKey, JSON.stringify(history));
+                bubble.textContent = finalAnswer;
+                bubble.classList.remove('status-bubble');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+
+              if (eventName === 'error') {
+                const msg = parsed.detail || 'Something went wrong while querying the assistant.';
+                bubble.textContent = 'Error: ' + msg;
+                const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+                history.push({ role: 'assistant', content: 'Error: ' + msg });
+                localStorage.setItem(chatHistoryKey, JSON.stringify(history));
+                setAgentStatus('');
+              }
+            } catch (error) {
+              // Ignore malformed event payloads.
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        const msg = error.message || 'Something went wrong while querying the assistant.';
+        bubble.textContent = 'Error: ' + msg;
+        const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+        history.push({ role: 'assistant', content: 'Error: ' + msg });
+        localStorage.setItem(chatHistoryKey, JSON.stringify(history));
+        setAgentStatus('');
+      });
+    });
+
+    document.querySelectorAll('.btn[data-question]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        chatInput.value = this.getAttribute('data-question');
+        chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      });
+    });
+  });
+</script>
+{% endblock %}

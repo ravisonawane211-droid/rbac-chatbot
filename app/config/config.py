@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Google Configuration
     google_api_key: str
 
+    openai_api_key: str
+
+    # Langfuse Configuration
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_base_url: str | None = None
+
     # Collection Settings
     collection_name: str = "RBAC_CHATBOT"
 
@@ -30,8 +37,10 @@ class Settings(BaseSettings):
 
     # Model Configuration
     embedding_model: str = "gemini-embedding-001"
-    llm_model: str = "gemini-2.5-flash"
-    llm_provider: str = "vertex"
+    #llm_model: str = "gemini-2.5-flash"
+    llm_model: str = "gpt-5-mini"
+    #llm_provider: str = "vertex"
+    llm_provider: str = "openai"
 
     llm_temperature: float = 0.0
 
@@ -64,7 +73,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int
 
     # Evaluation Service
+    enable_evaluation:bool
     evaluation_service_url:str
+    eval_type: str
 
     # Postgress server path
     database_url:str
@@ -77,13 +88,16 @@ class Settings(BaseSettings):
     ENABLE_CACHE:bool
     REDIS_REST_URL:str
     REDIS_REST_TOKEN:str
-    CACHE_TTL_RAG: int = 3600
+    CACHE_TTL_RAG: int = 86400
 
     # Reranking
     ENABLE_RERANKING:bool
     COHERE_API_KEY:str
     COHERE_TOP_N:int
     RERANK_MODEL:str
+
+    # Chatbot Service URL
+    CHATBOT_SERVICE_URL:str
 
     #Enviornment
     env:str="dev"

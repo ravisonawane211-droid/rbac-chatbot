@@ -30,6 +30,10 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
 
     source_docs = knowledge_base_service.search_knowledge_base(question=question)
 
+    if not source_docs:
+        return {"question": question, "sources": [], "context": f"No relevant information found in the knowledge base for roles: {roles}.", 
+                "tool": "knowledge_base"}
+
     context = _format_docs(docs=source_docs)
 
     sources = json.dumps([

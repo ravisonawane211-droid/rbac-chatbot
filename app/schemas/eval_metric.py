@@ -8,4 +8,6 @@ class EvalMetric(BaseModel):
     metric_name:str
     metric_value:float
     eval_status:str
+    created_at:str
+    created_by:str
     

@@ -20,6 +20,7 @@ def get_user(username:str,db_service:DatabaseExecuteService):
         row = user_df.iloc[0]
         user = User(
                     user_id=row["user_id"],
+                    employee_id=row["employee_id"],
                     email=row["user_id"],
                     user_role=str(row["user_role"]).split(","),
                     password=row["password"]

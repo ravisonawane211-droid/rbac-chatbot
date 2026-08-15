@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Features{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <div class="glass-section section" style="text-align:center;">
+    <h1 class="gradient-text" style="font-size:48px;">Enterprise Intelligence Engine</h1>
+    <p style="color:#D1D5DB; font-size:17px;">
+      FinSolve Technologies combines Retrieval-Augmented Generation (RAG) with dynamic role-based governance to deliver secure, context-rich enterprise intelligence.
+    </p>
+  </div>
+
+  <div class="glass-section section">
+    <h2>🧠 Retrieval-Augmented Intelligence</h2>
+    <p style="color:#D1D5DB; font-size:17px;">
+      Our architecture retrieves verified enterprise knowledge before generating responses — ensuring contextual accuracy, compliance, and reduced hallucination risk.
+    </p>
+    <ul class="feature-subtext">
+      <li>Secure vector-based document retrieval</li>
+      <li>Context-enriched response generation</li>
+      <li>Multi-department knowledge indexing</li>
+      <li>Source-grounded outputs</li>
+      <li>Optimized query processing pipeline</li>
+    </ul>
+  </div>
+
+  <div class="glass-section section">
+    <h2>🗄️ Natural Language to SQL Intelligence</h2>
+    <p class="feature-subtext">
+      FinSolve enables business users to query structured enterprise databases using natural language. The system translates human queries into optimized SQL statements, retrieves validated data, and delivers contextual insights — all within role-based access boundaries.
+    </p>
+    <ul class="feature-subtext">
+      <li>Natural language → SQL query translation</li>
+      <li>Schema-aware query generation</li>
+      <li>Role-based database access control</li>
+      <li>Secure execution layer</li>
+      <li>Contextual result explanation</li>
+    </ul>
+  </div>
+
+  <div class="glass-section section">
+    <h2>🔐 Precision Role-Based Access Control</h2>
+    <p style="color:#D1D5DB; font-size:17px;">
+      Every query undergoes real-time role validation before retrieval and response synthesis. Data exposure is dynamically filtered based on user permissions.
+    </p>
+    <ul class="feature-subtext">
+      <li>Department-level data segmentation</li>
+      <li>Executive cross-functional access</li>
+      <li>Automatic response filtering</li>
+      <li>Zero unauthorized data exposure architecture</li>
+      <li>Audit-ready governance framework</li>
+    </ul>
+  </div>
+
+  <div class="glass-section section" style="text-align:center;">
+    <h2>🧠 AI Architecture Overview</h2>
+    <p style="color:#D1D5DB; max-width:800px; margin:auto;">
+      Every user query flows through role validation, secure vector retrieval, and a Retrieval-Augmented Generation engine before delivering a compliant, context-rich response.
+    </p>
+  </div>
+
+  <div class="architecture-image-wrap">
+    <div class="d-flex justify-content-end mb-3">
+      <button type="button" class="btn btn-outline-light btn-sm architecture-maximize-btn" data-bs-toggle="modal" data-bs-target="#architectureModal">
+        Maximize
+      </button>
+    </div>
+    <div class="d-flex justify-content-center mb-5">
+      <img src="/static/images/RBAC Chatbot Architecture V1.png" alt="RBAC Chatbot Architecture" class="img-fluid rounded-4 shadow-lg architecture-visual" data-bs-toggle="modal" data-bs-target="#architectureModal" style="cursor:pointer;" />
+    </div>
+  </div>
+
+  <div class="modal fade" id="architectureModal" tabindex="-1" aria-labelledby="architectureModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-dark border border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white" id="architectureModalLabel">RBAC Chatbot Architecture</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-3">
+          <img src="/static/images/RBAC Chatbot Architecture V1.png" alt="RBAC Chatbot Architecture" class="img-fluid rounded-4" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="mb-4">🏢 Department-Specific Intelligence Modules</h2>
+
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="glass-card">
+        <h4>💰 Finance Intelligence</h4>
+        <p>Financial reports, expense analytics, reimbursements, and cost visibility.</p>
+      </div>
+      <div class="glass-card" style="margin-top:25px;">
+        <h4>📢 Marketing Insights</h4>
+        <p>Campaign performance, sales metrics, and customer behavior analytics.</p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="glass-card">
+        <h4>👩‍💼 Human Resources</h4>
+        <p>Payroll data, employee records, attendance tracking, performance reviews.</p>
+      </div>
+      <div class="glass-card" style="margin-top:25px;">
+        <h4>⚙ Engineering Knowledge</h4>
+        <p>Technical documentation, architecture guidelines, operational playbooks.</p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="glass-card">
+        <h4>🏢 Executive Analytics</h4>
+        <p>Cross-department intelligence synthesis for strategic decision-making.</p>
+      </div>
+      <div class="glass-card" style="margin-top:25px;">
+        <h4>👤 Employee Knowledge Hub</h4>
+        <p>Policies, announcements, internal FAQs, and general company resources.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-section section mt-5">
+    <h2>⚙ Enterprise-Grade Infrastructure</h2>
+    <p class="feature-subtext">Built for scale, security, and compliance.</p>
+    <ul class="feature-subtext">
+      <li>Encrypted document ingestion pipeline</li>
+      <li>Secure API-driven backend architecture</li>
+      <li>Role-isolated knowledge indexing</li>
+      <li>Scalable vector database integration</li>
+      <li>Compliance-ready audit logging</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

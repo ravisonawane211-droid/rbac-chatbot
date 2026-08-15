@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException,Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from app.services.auth_service import AuthService
 from app.schemas.user import User
 from app.schemas.login_response import LoginResponse
@@ -7,7 +7,7 @@ from app.schemas.create_user_request import CreateUserRequest
 from app.schemas.create_user_response import CreateUserResponse
 from app.auth.jwt_bearer import JWTBearer
 from app.services.db_execute_service import DatabaseExecuteService
-from app.utils.token_utils import create_access_token
+from app.utils.token_utils import create_access_token, create_refresh_token, decode_refresh_token
 from app.config.config import get_settings
 from app.utils.logger import get_logger
 import uuid
@@ -58,41 +58,116 @@ def create_user(create_user_request:CreateUserRequest,user_info: dict =Depends(a
 
 
 @router.post("/login")
-def login(login_request:LoginRequest):
+async def login(request: Request):
     """
     User login endpoint.
-    Args:
-        login_request (LoginRequest): The login request containing username and password.
-    Returns:
-        LoginResponse: The response containing user details and access token.
-
+    Supports both JSON body and form-encoded login submissions.
     """
-    logger.info("Attempting login for user: {login_request.user_name}")
+    content_type = request.headers.get("content-type", "")
 
-    if login_request.user_name is None or login_request.password is None:
+    try:
+        if "application/json" in content_type.lower():
+            payload = await request.json()
+            login_request = LoginRequest.model_validate(payload)
+            user_name = login_request.user_name
+            password = login_request.password
+        else:
+            form_data = await request.form()
+            user_name = form_data.get("user_name") or form_data.get("username")
+            password = form_data.get("password")
+    except Exception:
+        user_name = None
+        password = None
+
+    if not user_name or not password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    authenticated_user:User = _authenticate(login_request.user_name,login_request.password)
-    
+    logger.info(f"Attempting login for user: {user_name}")
+
+    authenticated_user: User = _authenticate(user_name, password)
+
     if not authenticated_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    else:
-        conversation_id = str(uuid.uuid4())
 
-        access_token = create_access_token(user_id=authenticated_user.user_id, password=authenticated_user.password,
-                                         roles=authenticated_user.user_role, secret_key=settings.secret_key,
-                                         conversation_id=conversation_id, algorithm=settings.algorithm)
-        authenticated_user.password = None
-        
-        login_response = LoginResponse(
-            message=f"Welcome {authenticated_user.user_id}!",
-            status="success",
-            user=authenticated_user,
-            access_token = access_token,
-            conversation_id=conversation_id
-        )
-        logger.info(f"User {login_request.user_name} logged in successfully")
+    conversation_id = str(uuid.uuid4())
+
+    access_token = create_access_token(
+        user_id=authenticated_user.user_id,
+        employee_id=authenticated_user.employee_id,
+        password=authenticated_user.password,
+        roles=authenticated_user.user_role,
+        secret_key=settings.secret_key,
+        conversation_id=conversation_id,
+        algorithm=settings.algorithm,
+    )
+    refresh_token = create_refresh_token(
+        user_id=authenticated_user.user_id,
+        employee_id=authenticated_user.employee_id,
+        password=authenticated_user.password,
+        roles=authenticated_user.user_role,
+        secret_key=settings.secret_key,
+        conversation_id=conversation_id,
+        algorithm=settings.algorithm,
+    )
+    authenticated_user.password = None
+
+    login_response = LoginResponse(
+        message=f"Welcome {authenticated_user.user_id}!",
+        status="success",
+        user=authenticated_user,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        conversation_id=conversation_id,
+    )
+    logger.info(f"User {user_name} logged in successfully")
     return login_response
+
+
+@router.post("/refresh")
+async def refresh(request: Request):
+    """Refresh an expired access token using a valid refresh token."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    refresh_token = payload.get("refresh_token") or request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token is required.")
+
+    decoded = decode_refresh_token(refresh_token, settings.secret_key, settings.algorithm)
+    if not decoded:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token.")
+
+    auth_service = AuthService()
+    user = auth_service.authenticate(decoded["user_id"], decoded["password"])
+    if not user:
+        raise HTTPException(status_code=401, detail="User session could not be validated.")
+
+    new_access_token = create_access_token(
+        user_id=user.user_id,
+        employee_id=user.employee_id,
+        password=user.password,
+        roles=user.user_role,
+        secret_key=settings.secret_key,
+        conversation_id=decoded.get("conversation_id") or str(uuid.uuid4()),
+        algorithm=settings.algorithm,
+    )
+    new_refresh_token = create_refresh_token(
+        user_id=user.user_id,
+        employee_id=user.employee_id,
+        password=user.password,
+        roles=user.user_role,
+        secret_key=settings.secret_key,
+        conversation_id=decoded.get("conversation_id") or str(uuid.uuid4()),
+        algorithm=settings.algorithm,
+    )
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "conversation_id": decoded.get("conversation_id") or str(uuid.uuid4()),
+    }
 
 def _authenticate(user_name:str, password: str) -> User:
 

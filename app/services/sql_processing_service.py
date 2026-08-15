@@ -18,16 +18,19 @@ settings = get_settings()
 
 class SQLProcessingService:
 
-    def __init__(self, user_query:str, format_answer:bool = True, roles: List[str] = []):
+    def __init__(self, user_query:str, format_answer:bool = True, user_info: dict = {}) -> None:
         
         self.logger = get_logger(__name__)
 
-        self.roles = roles
+        self.user_info = user_info
+
+        self.roles = user_info.get("roles", [])
         
         self.max_retries = 3
         self.format_answer = format_answer
         self.user_query = user_query
         self.db_schema_path = settings.db_schema_path
+        self.sql_query = ""  # Initialize sql_query attribute
 
         #initialize service classes
 
@@ -50,7 +53,7 @@ class SQLProcessingService:
             # 2. Generate SQL using SQL Generation Service
 
             self.sql_query = self.sql_generation_service.generate_sql_query(user_query=self.user_query , entities=None, 
-                                                            schema_components=schema_components)
+                                                            schema_components=schema_components, user_info= self.user_info)
             
             # 3. Validate SQL Query using SQL Validation Service
             roles = set(self.roles)
@@ -65,7 +68,7 @@ class SQLProcessingService:
             allowed_tables = access_tables['table_name'].tolist()
 
             self.sql_validation_service.validate_sql_query(sql_query=self.sql_query,schema_component=schema_components,
-                                                           allowed_tables=allowed_tables)
+                                                           allowed_tables=allowed_tables, user_info=self.user_info)
 
             # 4. Execute SQL Query with retry logic using DatabaseExecuteService
 
@@ -77,7 +80,8 @@ class SQLProcessingService:
             result = {
                 "status": "success",
                 "sql_query" : self.sql_query,
-                "results": json.dumps(result_df.to_dict(orient='records')),
+                # use pandas' to_json with ISO date formatting to ensure Timestamps are serializable
+                "results": result_df.to_json(date_format='iso', orient='records'),
                 "row_count": len(result_df),
             }
 
@@ -90,7 +94,8 @@ class SQLProcessingService:
                 "sql_query" : self.sql_query,
                 "results": [],
                 "row_count": 0,
-                "message": "Error while procesing user query"
+                "message": "Error while procesing user query",
+                "error": str(e)
             }
             return result
 

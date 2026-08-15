@@ -59,7 +59,9 @@ class DashboardService:
                     answer=metric.get("answer"),
                     metric_name=metric.get("metric_name"),
                     metric_value=metric.get("metric_value"),
-                    eval_status=status
+                    eval_status=status,
+                    created_at=metric.get("created_at"),
+                    created_by=metric.get("created_by")
                 )
                 metrics.append(eval_metric)
                 

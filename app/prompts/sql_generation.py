@@ -8,8 +8,9 @@ class SQLGenerationPrompts:
         user_query: str,
         schema: Dict[str, Any], 
         entities: Dict[str, Any], 
-        joins: List
-    ):
+        joins: List,
+        user_info: dict
+    ) -> str:
             prompt_parts = ["""
                 You are an expert PostgreSQL developer specializing in queries.
 
@@ -20,6 +21,7 @@ class SQLGenerationPrompts:
 
             prompt_parts.append(f"\nUser Query in natural language text:\n{user_query}")
             prompt_parts.append(f"\nDatabase Schema in JSON format:\n{json.dumps(schema,indent=2)}")
+            prompt_parts.append(f"\nUser Information:\n{json.dumps(user_info,indent=2)}")
 
             # 👉 Conditionally add entities
             if entities and len(entities)>0:
@@ -34,7 +36,7 @@ class SQLGenerationPrompts:
 
             rules = """
         RULES:
-        1. Use ONLY the tables and columns present in the schema.
+        1. Strictly use only the tables and columns present in the schema,do not add tables or columns that are not present.
         2. Use PostgreSQL compatible syntax only.
         3. Never hallucinate tables or columns.
         4. Always qualify columns with table aliases when multiple tables are used.
@@ -46,6 +48,11 @@ class SQLGenerationPrompts:
         10. Use safe casting for dates and numbers.
         11. Do not modify data (no INSERT, UPDATE, DELETE, DROP).
         12. Return only the SQL query, no explanation or markdown.
+        13. CRITICAL - For tables for employee related info: include a WHERE clause filtering by 
+        employee_id = '{user_info.get("employee_id", "LOGGED_IN_EMPLOYEE_ID")}' only when needed, for the query which does not 
+        need employee_id in WHERE clause then do not include it. Users can only access their own data. 
+        If the query asks for another employee's information in case of role 'general', REJECT by returning an error message instead of SQL.
+        14. Never expose data to users that violates their RBAC permissions.
         """
             prompt_parts.append(rules.strip())
 
@@ -94,7 +101,7 @@ class SQLGenerationPrompts:
 
             rules = """
         RULES:
-        1. Use ONLY the tables and columns present in the schema.
+        1. Strictly use only the tables and columns present in the schema,do not add tables or columns that are not present.
         2. Use PostgreSQL compatible syntax only.
         3. Never hallucinate tables or columns.
         4. Always qualify columns with table aliases when multiple tables are used.
@@ -106,6 +113,11 @@ class SQLGenerationPrompts:
         10. Use safe casting for dates and numbers.
         11. Do not modify data (no INSERT, UPDATE, DELETE, DROP).
         12. Return only the SQL query, no explanation or markdown.
+        13. CRITICAL - For tables for employee related info: include a WHERE clause filtering by 
+        employee_id = '{user_info.get("employee_id", "LOGGED_IN_EMPLOYEE_ID")}' only when needed, for the query which does not 
+        need employee_id in WHERE clause then do not include it. Users can only access their own data. 
+        If the query asks for another employee's information in case of role 'general', REJECT by returning an error message instead of SQL.
+        14. Never expose data to users that violates their RBAC permissions.
         """
             prompt_parts.append(rules.strip())
 

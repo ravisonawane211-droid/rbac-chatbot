@@ -1,15 +1,20 @@
 from langchain.agents import create_agent
 import sys
 from pathlib import Path
+
+from app.guardrails.prompt_injection import PromptInjectionMiddleware
+from app.guardrails.sql_injection import SQLSafetyGuardrailMiddleware
 project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from app.guardrails.content_filter import ContentFilterMiddleware
+from app.guardrails.response_safety import SafetyGuardrailMiddleware
 from app.tools.knowledge_base import knowledge_base_search
 from app.tools.text_to_sql import text_to_sql
 from app.prompts.prompts import SMART_AGENT
 from app.services.llm_service import LLMService
-from langchain.agents.middleware import dynamic_prompt, ModelRequest
+from langchain.agents.middleware import dynamic_prompt, ModelRequest, AgentMiddleware, before_agent
 from langchain_core.prompts import PromptTemplate
 from app.schemas.context import Context
 from app.schemas.agent_state import AgentState
@@ -25,11 +30,13 @@ def rag_prompt(request: ModelRequest) -> str:
     """Generate system prompt"""
     question = request.runtime.context.get("question", "")
 
-    roles = request.runtime.context.get("roles",[])
+    user_info = request.runtime.context.get("user_info", {})
+    
+    roles = user_info.get("roles",[])
 
     template = PromptTemplate.from_template(SMART_AGENT)
 
-    prompt = template.format(question=question,roles = roles)
+    prompt = template.format(question=question,roles = roles, user_info = user_info)
 
     return prompt
 
@@ -37,7 +44,12 @@ fin_solve_agent = create_agent(
     name="fin_solve_agent",
     model=llm,
     tools=[knowledge_base_search, text_to_sql],
-    middleware=[rag_prompt],
+    middleware=[rag_prompt,
+                PromptInjectionMiddleware(),
+                ContentFilterMiddleware(),
+                SQLSafetyGuardrailMiddleware(),
+                SafetyGuardrailMiddleware()],
+
     context_schema=Context,
     state_schema=AgentState,
     debug=True,

@@ -4,13 +4,15 @@ from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from typing import Any
 from app.config.config import get_settings
+from app.utils.langfuse_tracing import build_langchain_config
 
 settings = get_settings()
 
 class LLMService:
 
-    def __init__(self, llm_provider:str = None, llm_model: str = None):
+    def __init__(self, llm_provider:str = None, llm_model: str = None, user_info: dict | None = None):
         self.logger = get_logger(__name__)
+        self.user_info = user_info or {}
 
         self.llm_provider = llm_provider or settings.llm_provider
         self.llm_model = llm_model or settings.llm_model
@@ -21,8 +23,13 @@ class LLMService:
         self.logger.info(f"Generating LLM response with provider: {self.llm_provider}, model: {self.llm_model}")
 
         llm = self._get_llm(llm_provider= self.llm_provider , llm_model= self.llm_model,temperature=temperature)
+        config = build_langchain_config(
+            user_info=self.user_info,
+            route="llm.generate_response",
+            model=self.llm_model,
+        )
 
-        response = llm.invoke(prompt)
+        response = llm.invoke(prompt, config=config) if config else llm.invoke(prompt)
 
         self.logger.info(f"Response received from LLM: {response}")
 

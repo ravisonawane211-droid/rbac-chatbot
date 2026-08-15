@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Upload{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="glass-card p-4">
+        <h2 class="text-white mb-4">Upload Documents</h2>
+        <form id="uploadForm" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label">Choose file</label>
+            <input type="file" class="form-control" id="documentFile" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Document role</label>
+            <select class="form-select" id="documentRole">
+              <option value="general">general</option>
+              <option value="engineering">engineering</option>
+              <option value="marketing">marketing</option>
+              <option value="finance">finance</option>
+              <option value="hr">hr</option>
+            </select>
+          </div>
+          <div id="uploadAlert" class="alert d-none" role="alert"></div>
+          <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(function () {
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    async function refreshAccessToken() {
+      const refreshToken = localStorage.getItem('refreshToken') || getCookie('refresh_token');
+      if (!refreshToken) return null;
+
+      const response = await fetch('/users/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      localStorage.setItem('accessToken', data.access_token);
+      localStorage.setItem('refreshToken', data.refresh_token);
+      document.cookie = 'access_token=' + encodeURIComponent(data.access_token) + '; path=/; SameSite=Lax';
+      document.cookie = 'refresh_token=' + encodeURIComponent(data.refresh_token) + '; path=/; SameSite=Lax';
+      return data.access_token;
+    }
+
+    const token = localStorage.getItem('accessToken') || getCookie('access_token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    $('#uploadForm').on('submit', async function (e) {
+      e.preventDefault();
+      const file = document.getElementById('documentFile').files[0];
+      if (!file) {
+        $('#uploadAlert').removeClass('d-none alert-success').addClass('alert-danger').text('Please choose a file to upload.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('role', $('#documentRole').val());
+
+      const runUpload = function (currentToken) {
+        return $.ajax({
+          url: '/documents/upload',
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + currentToken },
+          data: formData,
+          processData: false,
+          contentType: false
+        });
+      };
+
+      try {
+        const response = await runUpload(localStorage.getItem('accessToken') || getCookie('access_token'));
+        $('#uploadAlert').removeClass('d-none alert-danger').addClass('alert-success').text(response.message || 'Upload succeeded.');
+        $('#uploadForm')[0].reset();
+      } catch (xhr) {
+        if (xhr.status === 403) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            try {
+              const retryResponse = await runUpload(newToken);
+              $('#uploadAlert').removeClass('d-none alert-danger').addClass('alert-success').text(retryResponse.message || 'Upload succeeded.');
+              $('#uploadForm')[0].reset();
+              return;
+            } catch (retryXhr) {
+              const msg = retryXhr.responseJSON?.detail || 'Upload failed.';
+              $('#uploadAlert').removeClass('d-none alert-success').addClass('alert-danger').text(msg);
+              return;
+            }
+          }
+        }
+
+        const msg = xhr.responseJSON?.detail || 'Upload failed.';
+        $('#uploadAlert').removeClass('d-none alert-success').addClass('alert-danger').text(msg);
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -2,6 +2,7 @@ from langchain_core.documents import Document
 import numpy as np
 import tiktoken
 import re
+from contextvars import ContextVar
 
 def format_docs(docs: list[Document]) -> str:
     """Format documents into a single context string.
@@ -83,3 +84,12 @@ def normalize(q: str) -> str:
     q = re.sub(r"[^\w\s]", "", q)
     q = " ".join(q.split())
     return q
+
+
+CURRENT_REQUEST_USER: ContextVar[dict] = ContextVar("current_user")
+
+def set_current_user(user_info: dict):
+    CURRENT_REQUEST_USER.set(user_info)
+
+def get_current_user() -> dict:
+    return CURRENT_REQUEST_USER.get({})

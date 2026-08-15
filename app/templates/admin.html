@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Admin{% endblock %}
+
+{% block content %}
+<section class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="glass-card p-4">
+        <h3 class="text-white mb-3">Create user</h3>
+        <form id="createUserForm">
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" id="newUsername" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" id="newPassword" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="newRole">
+              <option value="general">general</option>
+              <option value="engineering">engineering</option>
+              <option value="marketing">marketing</option>
+              <option value="finance">finance</option>
+              <option value="hr">hr</option>
+              <option value="admin">admin</option>
+              <option value="c-level">c-level</option>
+            </select>
+          </div>
+          <div id="userAlert" class="alert d-none" role="alert"></div>
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="glass-card p-4">
+        <h3 class="text-white mb-3">Application config</h3>
+        <form id="configForm">
+          <div class="mb-3">
+            <label class="form-label">Enable evaluation</label>
+            <select class="form-select" id="enableEval">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Evaluation type</label>
+            <select class="form-select" id="evalType">
+              <option value="Ragas">Ragas</option>
+              <option value="LLM-As-Judge">LLM-As-Judge</option>
+            </select>
+          </div>
+          <div id="configAlert" class="alert d-none" role="alert"></div>
+          <button type="submit" class="btn btn-primary">Save Config</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    async function refreshAccessToken() {
+      const refreshToken = localStorage.getItem('refreshToken') || getCookie('refresh_token');
+      if (!refreshToken) return null;
+
+      const response = await fetch('/users/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      localStorage.setItem('accessToken', data.access_token);
+      localStorage.setItem('refreshToken', data.refresh_token);
+      document.cookie = 'access_token=' + encodeURIComponent(data.access_token) + '; path=/; SameSite=Lax';
+      document.cookie = 'refresh_token=' + encodeURIComponent(data.refresh_token) + '; path=/; SameSite=Lax';
+      return data.access_token;
+    }
+
+    const token = localStorage.getItem('accessToken') || getCookie('access_token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const createUserForm = document.getElementById('createUserForm');
+    const configForm = document.getElementById('configForm');
+    const userAlert = document.getElementById('userAlert');
+    const configAlert = document.getElementById('configAlert');
+
+    async function fetchWithRefresh(url, options) {
+      const response = await fetch(url, options);
+      if (response.status !== 403) return response;
+
+      const newToken = await refreshAccessToken();
+      if (!newToken) return response;
+
+      const retryOptions = {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          Authorization: 'Bearer ' + newToken
+        }
+      };
+
+      return fetch(url, retryOptions);
+    }
+
+    createUserForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const payload = {
+        user: {
+          user_id: document.getElementById('newUsername').value,
+          password: document.getElementById('newPassword').value,
+          user_role: [document.getElementById('newRole').value],
+          is_active: true
+        },
+        created_by: JSON.parse(localStorage.getItem('user') || '{}').user_id || 'admin'
+      };
+
+      try {
+        const response = await fetchWithRefresh('/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'User creation failed.');
+        }
+
+        userAlert.className = 'alert alert-success';
+        userAlert.textContent = 'User created successfully.';
+        createUserForm.reset();
+      } catch (error) {
+        userAlert.className = 'alert alert-danger';
+        userAlert.textContent = error.message || 'User creation failed.';
+      }
+    });
+
+    configForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      try {
+        const response = await fetchWithRefresh('/dashboard/config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            enable_eval: document.getElementById('enableEval').value === 'Yes',
+            eval_type: document.getElementById('evalType').value
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Configuration save failed.');
+        }
+
+        configAlert.className = 'alert alert-success';
+        configAlert.textContent = 'Configuration saved successfully.';
+      } catch (error) {
+        configAlert.className = 'alert alert-danger';
+        configAlert.textContent = error.message || 'Configuration save failed.';
+      }
+    });
+  });
+</script>
+{% endblock %}

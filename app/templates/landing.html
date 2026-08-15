@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}FinAssist AI | Landing{% endblock %}
+
+{% block content %}
+<section id="home" class="hero-shell">
+  <div class="container py-5">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7">
+        <span class="badge-soft">Enterprise AI Workspace</span>
+        <h1 class="display-4 fw-bold text-white mt-3">Role-aware business intelligence for your teams.</h1>
+        <p class="lead text-light mt-4">
+          Ask questions across finance, HR, engineering, marketing, and operations with secure access controls,
+          document ingestion, and evaluation-backed answers.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a href="/login" class="btn btn-primary btn-lg px-4">Access Platform</a>
+          <a href="/chat" class="btn btn-outline-light btn-lg px-4">Open Chat</a>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="glass-card p-4">
+          <h5 class="text-white mb-3">Platform capabilities</h5>
+          <ul class="feature-list">
+            <li>Secure RBAC-based access</li>
+            <li>Document ingestion and retrieval</li>
+            <li>Role-tuned enterprise knowledge base</li>
+            <li>Evaluation and dashboard metrics</li>
+            <li>FastAPI-backed data services</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="container py-5">
+  <div class="text-center mb-4">
+    <span class="badge-soft">Platform Features</span>
+    <h2 class="text-white mt-3 mb-0">Enterprise Intelligence Engine</h2>
+  </div>
+
+  <div class="row g-4 mt-2">
+    <div class="col-md-4">
+      <div class="arch-box h-100">
+        <h4>Retrieval-Augmented Intelligence</h4>
+        <p>Secure document retrieval and response generation grounded in approved enterprise knowledge.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="arch-box h-100">
+        <h4>Natural Language to SQL</h4>
+        <p>Turn structured business questions into secure SQL-driven insights across operational data.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="arch-box h-100">
+        <h4>Role-Based Access Control</h4>
+        <p>Ensure every answer and dataset respects the user’s role, permissions, and department boundary.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="container py-5">
+  <div class="glass-card p-4 p-lg-5">
+    <div class="text-center mb-4">
+      <span class="badge-soft">About Us</span>
+      <h2 class="text-white mt-3 mb-0">FinSolve Technologies</h2>
+    </div>
+    <p class="text-light mb-3">
+      FinSolve Technologies is redefining enterprise intelligence through secure, context-aware AI systems powered by
+      retrieval-augmented generation and dynamic role-based access control.
+    </p>
+    <p class="text-light mb-0">
+      Our mission is to make enterprise knowledge instantly accessible without compromising security, compliance, or governance.
+    </p>
+  </div>
+</section>
+
+<section id="contact" class="container py-5">
+  <div class="glass-card p-4 p-lg-5">
+    <div class="text-center mb-4">
+      <span class="badge-soft">Contact</span>
+      <h2 class="text-white mt-3 mb-0">Get in touch</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="panel-box h-100">
+          <h5>Business inquiries</h5>
+          <p class="mb-0 text-light">hello@finsolve.ai</p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="panel-box h-100">
+          <h5>Support</h5>
+          <p class="mb-0 text-light">support@finsolve.ai</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
