@@ -79,10 +79,15 @@ class SQLProcessingService:
     def _get_allowed_tables_for_user(self) -> list[str]:
         return get_allowed_tables_for_roles(self.db_executor, self.roles)
 
-    def _process_db_schema(self, db_schema_path: str = settings.db_schema_path):
-        self.logger.info("Processing db schema")
+    # app/services/sql_processing_service.py
 
-        with open(db_schema_path, "r", encoding="utf-8") as file:
+    def _process_db_schema(self, db_schema_path: str = settings.db_schema_path):
+        schema_path = Path(db_schema_path)
+
+        if not schema_path.is_absolute():
+            schema_path = project_root / schema_path
+
+        with schema_path.open("r", encoding="utf-8") as file:
             return json.load(file)
 
 
