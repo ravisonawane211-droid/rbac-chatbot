@@ -80,7 +80,7 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
             cache_result["row_count"] = text_to_sql_resp.get("row_count")
 
         ttl = settings.CACHE_TTL_RAG
-        if answer != 'No relevant information was found for your access level. Please refine your query or contact your administrator if you believe this is an error.':
+        if answer != 'You don’t have permission to access the requested information. Please contact your administrator if you believe this is an error.':
             for cache_key in dict.fromkeys([query_cache_service.get_key(question, (roles[0] if roles else "general"))]):
                 query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
 
