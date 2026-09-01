@@ -56,16 +56,22 @@ async def query(request: QueryRequest,user_info: dict=Depends(auth_scheme)) -> Q
 
         
         if settings.enable_evaluation:
-            evaluation_service = EvaluationService()
-
-            evaluation_request = _get_evaluation_request(conversation_id=request.conversation_id,
-                                    question=request.question,answer=answer,sources=sources, user_id=user_info["user_id"])
-            
-            threading.Thread(
-                target=evaluation_service.send_for_evaluation,
-                args=(evaluation_request,),
-                daemon=True
-            ).start()
+            try:
+                evaluation_service = EvaluationService()
+                evaluation_request = _get_evaluation_request(
+                    conversation_id=request.conversation_id,
+                    question=request.question,
+                    answer=answer,
+                    sources=sources,
+                    user_id=user_info["user_id"],
+                )
+                threading.Thread(
+                    target=evaluation_service.send_for_evaluation,
+                    args=(evaluation_request,),
+                    daemon=True,
+                ).start()
+            except Exception:
+                logger.exception("Evaluation dispatch failed; returning chat response anyway")
 
         return QueryResponse(
             question=request.question,
@@ -137,7 +143,9 @@ async def query_stream(request: QueryRequest,user_info: dict =Depends(auth_schem
         )
     
 def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources:list, user_id:str):
-    contexts = [source.get("page_content","") for source in sources]
+    contexts = []
+
+    get_context(sources, contexts)
     
     metadata = {
         "retriever":"hybrid",
@@ -155,3 +163,15 @@ def _get_evaluation_request(conversation_id:str,question:str ,answer:str,sources
                                      user_id = user_id
                                      )
     return eval_request
+
+def get_context(sources, contexts):
+    for source in sources:
+        content = source.get("page_content", "")
+        if isinstance(content, str):
+            if content.strip():
+                contexts.append(content)
+        elif isinstance(content, list):
+            contexts.extend(
+                item for item in content
+                if isinstance(item, str) and item.strip()
+            )
