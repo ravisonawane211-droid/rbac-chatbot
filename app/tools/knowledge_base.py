@@ -21,18 +21,35 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
         question: Natural language query.
         roles: role list.
     Returns:
-        Context containing response from knowledge base service.
+        Context containing response from knowledge base service with access status.
     """
 
     logger.info("searching user query using knowledge_base_search tool")
 
     knowledge_base_service = KnowledgeBaseServie(roles=roles)
 
-    source_docs = knowledge_base_service.search_knowledge_base(question=question)
+    result = knowledge_base_service.search_knowledge_base(question=question)
+    source_docs = result.get("documents", [])
+    access_denied = result.get("access_denied", False)
+
+    if access_denied:
+        # Documents exist but user doesn't have permission
+        return {
+            "question": question, 
+            "sources": [], 
+            "context": "You don't have permission to access the requested information. Please contact your administrator if you believe this is an error.", 
+            "access_denied": True,
+            "tool": "knowledge_base"
+        }
 
     if not source_docs:
-        return {"question": question, "sources": [], "context": f"No relevant information found in the knowledge base for roles: {roles}.", 
-                "tool": "knowledge_base"}
+        return {
+            "question": question, 
+            "sources": [], 
+            "context": f"No relevant information found in the knowledge base for your search.", 
+            "access_denied": False,
+            "tool": "knowledge_base"
+        }
 
     context = _format_docs(docs=source_docs)
 
@@ -44,7 +61,8 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
     rag_response = {
           "question": question,
           "sources": sources,
-          "context": context, 
+          "context": context,
+          "access_denied": False,
           "tool": "knowledge_base"
     }
 
