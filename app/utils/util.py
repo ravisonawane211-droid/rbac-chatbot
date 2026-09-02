@@ -55,27 +55,24 @@ def chunk_quality_report(docs):
 
     return report, issues
 
-def reciprocal_rank_fusion(results_dict, weights, k=60,top_n=5):
+def reciprocal_rank_fusion(results_dict, weights, k=60, top_n=5):
     scores = {}
+    doc_lookup = {}
 
     for name, docs in results_dict.items():
         weight = weights.get(name, 1.0)
-        for rank, doc in enumerate(docs):
-            if not doc.metadata.get("id"):
-                raise ValueError("document id is mandatory for RRF")
+        for rank, doc in enumerate(docs or []):
             doc_id = doc.metadata.get("id")
+            if not doc_id:
+                source = doc.metadata.get("source")
+                doc_id = source or f"{name}:{rank}:{abs(hash(doc.page_content))}"
+                doc.metadata["id"] = doc_id
+
+            doc_lookup[doc_id] = doc
             rrf_score = weight * (1.0 / (k + rank))
             scores[doc_id] = scores.get(doc_id, 0.0) + rrf_score
 
     ranked_ids = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
-    # Map back to documents
-    doc_lookup = {}
-    for docs in results_dict.values():
-        for doc in docs:
-            doc_id = doc.metadata.get("id", doc.page_content)
-            doc_lookup[doc_id] = doc
-
     return [doc_lookup[doc_id] for doc_id, _ in ranked_ids[:top_n]]
 
 

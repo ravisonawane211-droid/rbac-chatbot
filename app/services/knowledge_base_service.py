@@ -6,6 +6,7 @@ from app.config.config import get_settings
 from app.services.sparse_vector_service import SparseVectorService
 from langchain_classic.retrievers.ensemble import EnsembleRetriever
 from langchain_cohere.rerank import CohereRerank
+from app.utils.util import reciprocal_rank_fusion
 
 
 settings = get_settings()
@@ -45,11 +46,14 @@ class KnowledgeBaseServie:
         self.sparse_vector_store = SparseVectorService(settings.sparse_retriever_type)
 
         filtered_docs = []
-        retrievers= []
+        retrievers = []
         weights = []
 
         self.source_docs = get_qdrant_documents()
         self.logger.info(f"Total documents in knowledge base: {len(self.source_docs)}")
+
+        self.unrestricted_dense_retriever = self.vector_store.get_dense_retriever(roles=[])
+        self.unrestricted_sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=self.source_docs, roles=[])
 
         if roles and "c-level" not in roles:
             allowed_roles = list(set(roles + ["general"]))
@@ -57,20 +61,15 @@ class KnowledgeBaseServie:
             filtered_docs = [doc for doc in self.source_docs if doc.metadata.get("role", []) and any(role in doc.metadata["role"] for role in allowed_roles)]
             self.logger.info(f"Documents after role filtering: {len(filtered_docs)}")
         else:
-            self.logger.info(f"No role filtering (c-level or empty roles)")
+            self.logger.info("No role filtering (c-level or empty roles)")
 
-        dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
-        weights.append(settings.alpha)
-
-        retrievers.append(dense_retriever)
+        self.dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
 
         if filtered_docs:
-            sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=filtered_docs, roles=roles)
-            retrievers.append(sparse_retriever)
-            weights.append(1 - settings.alpha)
+            self.sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=filtered_docs, roles=roles)
+        else:
+            self.sparse_retriever = self.unrestricted_sparse_retriever
 
-        self.hybrid_retriever = EnsembleRetriever(retrievers=retrievers,
-                                                              weights=weights)
         self.logger.info("KnowledgeBaseServie initialized")
 
     
@@ -87,50 +86,63 @@ class KnowledgeBaseServie:
         try:
             self.logger.info(f"[SEARCH START] User roles: {self.roles}, Question: {question[:80]}")
 
-            # First, do the role-filtered search
-            source_docs = self.hybrid_retriever.invoke(question)
-            self.logger.info(f"[ROLE-FILTERED SEARCH] Returned {len(source_docs) if source_docs else 0} documents")
-            
-            # If no docs found with role filtering, check if docs exist via unrestricted search
+            filtered_dense_docs = self.dense_retriever.invoke(question)
+            filtered_sparse_docs = self.sparse_retriever.invoke(question) if hasattr(self, "sparse_retriever") else []
+
+            self.logger.info(
+                f"[ROLE-FILTERED SEARCH] Dense results: {len(filtered_dense_docs) if filtered_dense_docs else 0}; "
+                f"Sparse results: {len(filtered_sparse_docs) if filtered_sparse_docs else 0}"
+            )
+
+            unrestricted_dense_docs = self.unrestricted_dense_retriever.invoke(question)
+            unrestricted_sparse_docs = self.unrestricted_sparse_retriever.invoke(question)
+            self.logger.info(
+                f"[UNRESTRICTED SEARCH] Dense results: {len(unrestricted_dense_docs) if unrestricted_dense_docs else 0}; "
+                f"Sparse results: {len(unrestricted_sparse_docs) if unrestricted_sparse_docs else 0}"
+            )
+
             access_denied = False
-            if not source_docs and self.roles and "c-level" not in self.roles:
-                self.logger.info(f"[ACCESS CHECK] No documents in role-filtered search. Checking unrestricted search...")
-                
-                # Check if dense search would find documents without role filtering
-                unrestricted_dense_retriever = self.vector_store.get_dense_retriever(roles=[])
-                unrestricted_dense_docs = unrestricted_dense_retriever.invoke(question)
-                self.logger.info(f"[UNRESTRICTED DENSE] Found {len(unrestricted_dense_docs) if unrestricted_dense_docs else 0} documents")
-                
-                unrestricted_sparse_docs = []
-                # Check if sparse (BM25) search would find documents without role filtering
-                if self.source_docs:
-                    unrestricted_sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=self.source_docs, roles=[])
-                    unrestricted_sparse_docs = unrestricted_sparse_retriever.invoke(question)
-                    self.logger.info(f"[UNRESTRICTED SPARSE] Found {len(unrestricted_sparse_docs) if unrestricted_sparse_docs else 0} documents")
-                
-                # If either retriever finds documents, user is denied access due to role restrictions
-                if unrestricted_dense_docs or unrestricted_sparse_docs:
+            if self.roles and "c-level" not in self.roles:
+                allowed_roles = set(self.roles + ["general"])
+
+                def normalize_roles(doc_roles):
+                    if not doc_roles:
+                        return set()
+                    if isinstance(doc_roles, str):
+                        return {doc_roles.lower()}
+                    return {str(role).lower() for role in doc_roles if role}
+
+                unrestricted_roles = set()
+                for doc in (unrestricted_dense_docs or []) + (unrestricted_sparse_docs or []):
+                    unrestricted_roles.update(normalize_roles(doc.metadata.get("role", [])))
+
+                restricted_roles = unrestricted_roles - allowed_roles
+                if restricted_roles:
                     access_denied = True
-                    self.logger.warning(f"[ACCESS DENIED] Documents exist but user role {self.roles} lacks permission")
-                else:
-                    self.logger.info(f"[NO RESULTS] No documents found even in unrestricted search")
+                    self.logger.warning(
+                        f"[ACCESS DENIED] User role {self.roles} is not allowed to access roles {sorted(restricted_roles)} for question: {question}"
+                    )
+
+            if access_denied:
+                self.logger.info(f"[RETURN] Restricted documents exist; denying access. access_denied={access_denied}")
+                return {"documents": [], "access_denied": True}
+
+            results_dict = {
+                "dense": filtered_dense_docs,
+                "sparse": filtered_sparse_docs,
+            }
+            weights = {"dense": settings.alpha, "sparse": 1 - settings.alpha}
+            source_docs = reciprocal_rank_fusion(results_dict, weights, top_n=settings.top_k)
 
             if not source_docs:
                 self.logger.info(f"[RETURN] Empty documents. access_denied={access_denied}")
                 return {"documents": [], "access_denied": access_denied}
 
-            # Log the roles of returned documents for debugging
-            doc_roles = []
-            for doc in source_docs:
-                doc_roles.append(doc.metadata.get("role", []))
-            self.logger.info(f"[DOC ROLES] Returned documents have roles: {doc_roles[:5]}")  # Log first 5
-
             if settings.ENABLE_RERANKING:
                 source_docs = self.rerank_docs(question=question, docs=source_docs)
 
-            self.logger.info(f"[RETURN] Found {len(source_docs)} documents. access_denied=False")
-
-            return {"documents": source_docs, "access_denied": False}
+            self.logger.info(f"[RETURN] Found {len(source_docs)} documents. access_denied={access_denied}")
+            return {"documents": source_docs, "access_denied": access_denied}
         except Exception as e:
             self.logger.error(f"[ERROR] Exception in search_knowledge_base: {str(e)}", exc_info=True)
             raise e
