@@ -48,25 +48,21 @@ class KnowledgeBaseServie:
         retrievers= []
         weights = []
 
-        source_docs = get_qdrant_documents()
-
-        # Store unrestricted retrievers for access denial detection
-        self.unrestricted_dense_retriever = self.vector_store.get_dense_retriever(roles=[])
+        self.source_docs = get_qdrant_documents()
+        self.logger.info(f"Total documents in knowledge base: {len(self.source_docs)}")
 
         if roles and "c-level" not in roles:
             allowed_roles = list(set(roles + ["general"]))
-            filtered_docs = [doc for doc in source_docs if doc.metadata.get("role", []) and any(role in doc.metadata["role"] for role in allowed_roles)]
+            self.logger.info(f"Filtering for roles: {allowed_roles}")
+            filtered_docs = [doc for doc in self.source_docs if doc.metadata.get("role", []) and any(role in doc.metadata["role"] for role in allowed_roles)]
+            self.logger.info(f"Documents after role filtering: {len(filtered_docs)}")
+        else:
+            self.logger.info(f"No role filtering (c-level or empty roles)")
 
         dense_retriever = self.vector_store.get_dense_retriever(roles=roles)
         weights.append(settings.alpha)
 
         retrievers.append(dense_retriever)
-
-        # Store unrestricted sparse retriever for access denial detection
-        if source_docs:
-            self.unrestricted_sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=source_docs, roles=[])
-        else:
-            self.unrestricted_sparse_retriever = None
 
         if filtered_docs:
             sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=filtered_docs, roles=roles)
@@ -89,38 +85,54 @@ class KnowledgeBaseServie:
         """
 
         try:
-            self.logger.info(f"searching knowledge for user query: {question}")
+            self.logger.info(f"[SEARCH START] User roles: {self.roles}, Question: {question[:80]}")
 
+            # First, do the role-filtered search
             source_docs = self.hybrid_retriever.invoke(question)
+            self.logger.info(f"[ROLE-FILTERED SEARCH] Returned {len(source_docs) if source_docs else 0} documents")
             
-            # If no docs found with role filtering, check if docs exist via unrestricted retrievers
+            # If no docs found with role filtering, check if docs exist via unrestricted search
             access_denied = False
             if not source_docs and self.roles and "c-level" not in self.roles:
-                # Check if dense search would find documents without role filtering
-                unrestricted_dense_docs = self.unrestricted_dense_retriever.invoke(question)
-                unrestricted_sparse_docs = []
+                self.logger.info(f"[ACCESS CHECK] No documents in role-filtered search. Checking unrestricted search...")
                 
+                # Check if dense search would find documents without role filtering
+                unrestricted_dense_retriever = self.vector_store.get_dense_retriever(roles=[])
+                unrestricted_dense_docs = unrestricted_dense_retriever.invoke(question)
+                self.logger.info(f"[UNRESTRICTED DENSE] Found {len(unrestricted_dense_docs) if unrestricted_dense_docs else 0} documents")
+                
+                unrestricted_sparse_docs = []
                 # Check if sparse (BM25) search would find documents without role filtering
-                if self.unrestricted_sparse_retriever:
-                    unrestricted_sparse_docs = self.unrestricted_sparse_retriever.invoke(question)
+                if self.source_docs:
+                    unrestricted_sparse_retriever = self.sparse_vector_store.get_sparse_retriever(docs=self.source_docs, roles=[])
+                    unrestricted_sparse_docs = unrestricted_sparse_retriever.invoke(question)
+                    self.logger.info(f"[UNRESTRICTED SPARSE] Found {len(unrestricted_sparse_docs) if unrestricted_sparse_docs else 0} documents")
                 
                 # If either retriever finds documents, user is denied access due to role restrictions
                 if unrestricted_dense_docs or unrestricted_sparse_docs:
                     access_denied = True
-                    self.logger.info(f"Access denied: Documents exist but user role {self.roles} does not have permission for question: {question}")
+                    self.logger.warning(f"[ACCESS DENIED] Documents exist but user role {self.roles} lacks permission")
+                else:
+                    self.logger.info(f"[NO RESULTS] No documents found even in unrestricted search")
 
             if not source_docs:
-                self.logger.info(f"No accessible documents found for question: {question} with your role: {self.roles}")
+                self.logger.info(f"[RETURN] Empty documents. access_denied={access_denied}")
                 return {"documents": [], "access_denied": access_denied}
+
+            # Log the roles of returned documents for debugging
+            doc_roles = []
+            for doc in source_docs:
+                doc_roles.append(doc.metadata.get("role", []))
+            self.logger.info(f"[DOC ROLES] Returned documents have roles: {doc_roles[:5]}")  # Log first 5
 
             if settings.ENABLE_RERANKING:
                 source_docs = self.rerank_docs(question=question, docs=source_docs)
 
-            self.logger.info(f"hybrid search retriever retrived {len(source_docs)} for user_query : {question}")
+            self.logger.info(f"[RETURN] Found {len(source_docs)} documents. access_denied=False")
 
             return {"documents": source_docs, "access_denied": False}
         except Exception as e:
-            self.logger.error("Error occurred while searching knowledge base")
+            self.logger.error(f"[ERROR] Exception in search_knowledge_base: {str(e)}", exc_info=True)
             raise e
         
     

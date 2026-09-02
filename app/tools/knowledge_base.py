@@ -32,24 +32,32 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
     source_docs = result.get("documents", [])
     access_denied = result.get("access_denied", False)
 
+    logger.info(f"Tool result: access_denied={access_denied}, num_documents={len(source_docs) if source_docs else 0}")
+
     if access_denied:
         # Documents exist but user doesn't have permission
-        return {
+        permission_response = {
             "question": question, 
             "sources": [], 
             "context": "You don't have permission to access the requested information. Please contact your administrator if you believe this is an error.", 
             "access_denied": True,
-            "tool": "knowledge_base"
+            "tool": "knowledge_base",
+            "status": "ACCESS_DENIED"
         }
+        logger.warning(f"Returning ACCESS_DENIED response for question: {question}")
+        return permission_response
 
     if not source_docs:
-        return {
+        not_found_response = {
             "question": question, 
             "sources": [], 
             "context": f"No relevant information found in the knowledge base for your search.", 
             "access_denied": False,
-            "tool": "knowledge_base"
+            "tool": "knowledge_base",
+            "status": "NOT_FOUND"
         }
+        logger.info(f"Returning NOT_FOUND response for question: {question}")
+        return not_found_response
 
     context = _format_docs(docs=source_docs)
 
@@ -63,6 +71,13 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
           "sources": sources,
           "context": context,
           "access_denied": False,
+          "tool": "knowledge_base",
+          "status": "SUCCESS"
+    }
+
+    logger.info(f"received response in knowledge_base_search tool: {context[:200]}")
+
+    return  rag_response
           "tool": "knowledge_base"
     }
 
