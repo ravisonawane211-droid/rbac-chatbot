@@ -77,22 +77,16 @@ def knowledge_base_search(question: str, roles: List[str]) -> dict:
 
     logger.info(f"received response in knowledge_base_search tool: {context[:200]}")
 
-    return  rag_response
-          "tool": "knowledge_base"
-    }
-
-    logger.info(f"received response in knowledge_base_search tool: {context[:200]}")
-
-    return  rag_response
+    return rag_response
 
 
 def _format_docs(docs: list[Document]) -> str:
-        """Format documents into a single context string.
+    """Format documents into a single context string.
 
-        Args:
-            docs: List of Document objects
+    Args:
+        docs: List of Document objects
 
-        Returns:
-            Formatted context string
-        """
-        return "\n".join("content: "+ doc.page_content+ "\n source: "+doc.metadata["source"] + "\n" for doc in docs)
+    Returns:
+        Formatted context string
+    """
+    return "\n".join("content: "+ doc.page_content+ "\n source: "+doc.metadata["source"] + "\n" for doc in docs)
