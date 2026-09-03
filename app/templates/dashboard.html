@@ -64,9 +64,10 @@
 
     function loadDashboard() {
       const currentToken = localStorage.getItem('accessToken') || getCookie('access_token');
+      const metricsUrl = '{{ evaluation_service_url }}/evaluate/metrics/rbac_chatbot';
 
       $.ajax({
-        url: '/evaluate/metrics/rbac_chatbot',
+        url: metricsUrl,
         method: 'GET',
         headers: { Authorization: 'Bearer ' + currentToken },
         success: function (response) {
@@ -96,7 +97,7 @@
             const newToken = await refreshAccessToken();
             if (newToken) {
               $.ajax({
-                url: '/evaluate/metrics/rbac_chatbot',
+                url: metricsUrl,
                 method: 'GET',
                 headers: { Authorization: 'Bearer ' + newToken },
                 success: function (response) {

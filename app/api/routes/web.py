@@ -4,10 +4,12 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from app.config.config import get_settings
 
 router = APIRouter(tags=["Web"])
 project_root = Path(__file__).resolve().parents[3]
 templates = Jinja2Templates(directory=str(project_root / "app" / "templates"))
+settings = get_settings()
 
 
 @router.get("/", include_in_schema=False)
@@ -60,8 +62,15 @@ async def admin_page(request: Request):
 
 @router.get("/dashboard")
 async def dashboard_page(request: Request):
-    """Serve the dashboard page."""
-    return templates.TemplateResponse(request, "dashboard.html", {"request": request})
+    """Serve the Dashboard page."""
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {
+            "request": request,
+            "evaluation_service_url": settings.evaluation_service_url.rstrip("/").removesuffix("/evaluate"),
+        },
+    )
 
 
 @router.get("/upload")
