@@ -66,7 +66,7 @@
       const currentToken = localStorage.getItem('accessToken') || getCookie('access_token');
 
       $.ajax({
-        url: '/dashboard/metrics/rbac_chatbot',
+        url: '/evaluate/metrics/rbac_chatbot',
         method: 'GET',
         headers: { Authorization: 'Bearer ' + currentToken },
         success: function (response) {
