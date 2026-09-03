@@ -2,6 +2,18 @@
 
 {% block title %}FinAssist AI | Dashboard{% endblock %}
 
+{% block styles %}
+<style>
+  .answer-cell {
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="container py-4">
   <div class="glass-card p-4">
@@ -73,6 +85,11 @@
       }[character]));
     }
 
+    function shortenText(value, maxLength = 160) {
+      const text = String(value ?? '-');
+      return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+    }
+
     function renderDashboard(response) {
       const rows = response.eval_metrics || [];
       const threshold = response.threshold || response.threashold || {};
@@ -116,7 +133,9 @@
           return `<td class="${statusClass}" title="${escapeHtml(status)}">${escapeHtml(metric.metric_value ?? '-')}</td>`;
         }).join('');
 
-        return `<tr><td>${escapeHtml(group.question)}</td><td>${escapeHtml(group.answer)}</td>${metricCells}</tr>`;
+        const fullAnswer = escapeHtml(group.answer);
+        const shortAnswer = escapeHtml(shortenText(group.answer));
+        return `<tr><td>${escapeHtml(group.question)}</td><td class="answer-cell" title="${fullAnswer}" aria-label="${fullAnswer}">${shortAnswer}</td>${metricCells}</tr>`;
       }).join('');
 
       $('#dashboardTableBody').html(html);
