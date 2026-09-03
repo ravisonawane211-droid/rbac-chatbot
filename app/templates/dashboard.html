@@ -7,6 +7,9 @@
   <div class="glass-card p-4">
     <h2 class="text-white mb-3">Evaluation Dashboard</h2>
     <div id="dashboardAlert" class="alert d-none" role="alert"></div>
+    <h4 class="text-white">Evaluation Metric Details</h4>
+    <div id="dashboardThresholds" class="text-white mb-1">Thresholds: Loading...</div>
+    <div class="text-white mb-3">🟢 Green: Within threshold | 🔴 Red: Outside threshold</div>
     <div class="table-responsive">
       <table class="table table-dark table-striped align-middle">
         <thead>
@@ -19,7 +22,7 @@
         </thead>
         <tbody id="dashboardTableBody">
           <tr>
-            <td colspan="4" class="text-muted">Loading metrics...</td>
+            <td colspan="4" class="text-white">Loading metrics...</td>
           </tr>
         </tbody>
       </table>
@@ -71,7 +74,12 @@
         method: 'GET',
         headers: { Authorization: 'Bearer ' + currentToken },
         success: function (response) {
-          const rows = response.metrics || [];
+          const rows = response.eval_metrics || [];
+          const threshold = response.threshold || response.threashold || {};
+          const thresholdText = Object.entries(threshold)
+            .map(([name, value]) => `${name}: ${value}`)
+            .join(', ');
+          $('#dashboardThresholds').text('Thresholds: ' + (thresholdText || 'Not available'));
           if (!rows.length) {
             $('#dashboardTableBody').html('<tr><td colspan="4" class="text-muted">No evaluation metrics available yet.</td></tr>');
             return;
@@ -101,7 +109,12 @@
                 method: 'GET',
                 headers: { Authorization: 'Bearer ' + newToken },
                 success: function (response) {
-                  const rows = response.metrics || [];
+                  const rows = response.eval_metrics || [];
+                  const threshold = response.threshold || response.threashold || {};
+                  const thresholdText = Object.entries(threshold)
+                    .map(([name, value]) => `${name}: ${value}`)
+                    .join(', ');
+                  $('#dashboardThresholds').text('Thresholds: ' + (thresholdText || 'Not available'));
                   if (!rows.length) {
                     $('#dashboardTableBody').html('<tr><td colspan="4" class="text-muted">No evaluation metrics available yet.</td></tr>');
                     return;

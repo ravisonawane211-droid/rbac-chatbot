@@ -46,8 +46,9 @@ class DashboardService:
         try:
             response = requests.get(f"{self.eval_api_url}/metrics/{self.app_name}")
             response.raise_for_status()
-            threshold = response.json().get("threashold", {})
-            metric_response = response.json().get("eval_metrics", [])
+            payload = response.json()
+            threshold = payload.get("threshold", payload.get("threashold", {}))
+            metric_response = payload.get("eval_metrics", payload.get("metrics", []))
             metrics = []
             for metric in metric_response:
                 logger.debug(f"Metric fetched: {metric}")
