@@ -96,7 +96,7 @@
             const newToken = await refreshAccessToken();
             if (newToken) {
               $.ajax({
-                url: '/dashboard/metrics/rbac_chatbot',
+                url: '/evaluate/metrics/rbac_chatbot',
                 method: 'GET',
                 headers: { Authorization: 'Bearer ' + newToken },
                 success: function (response) {
