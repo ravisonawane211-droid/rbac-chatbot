@@ -98,6 +98,14 @@
         .join(', ');
       $('#dashboardThresholds').text('Thresholds: ' + (thresholdText || 'Not available'));
 
+      function getThreshold(metricName) {
+        const normalizedName = String(metricName).trim().toLowerCase();
+        const matchingEntry = Object.entries(threshold).find(([name]) =>
+          String(name).trim().toLowerCase() === normalizedName
+        );
+        return matchingEntry ? Number(matchingEntry[1]) : NaN;
+      }
+
       if (!rows.length) {
         $('#dashboardTableHeader').html('<th>Question</th><th>Answer</th>');
         $('#dashboardTableBody').html('<tr><td colspan="2" class="text-white">No evaluation metrics available yet.</td></tr>');
@@ -130,7 +138,7 @@
 
           const status = String(metric.eval_status || 'red').trim().toLowerCase();
           const score = Number(metric.metric_value);
-          const thresholdValue = Number(threshold[name]);
+          const thresholdValue = getThreshold(name);
           const hasThreshold = Number.isFinite(score) && Number.isFinite(thresholdValue);
           const isGreen = hasThreshold ? score >= thresholdValue : status === 'green';
           const displayStatus = isGreen ? 'green' : 'red';
