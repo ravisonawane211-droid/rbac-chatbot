@@ -52,7 +52,8 @@ class SafetyGuardrailMiddleware(AgentMiddleware):
             return {
                     "messages": [{
                         "role": "assistant",
-                        "content": "I cannot provide that response.Please rephrase your request. "
+                        "content": "I cannot provide that response.Please rephrase your request. ",
+                        "status": "ACCESS_DENIED"
                     }],
                     "jump_to": "end"
                 }

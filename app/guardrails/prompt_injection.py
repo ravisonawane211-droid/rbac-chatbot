@@ -51,7 +51,8 @@ class PromptInjectionMiddleware(AgentMiddleware):
                 return {
                     "messages": [{
                         "role": "assistant",
-                        "content": "Your request contains instructions that attempt to manipulate the system and cannot be processed."
+                        "content": "Your request contains instructions that attempt to manipulate the system and cannot be processed.",
+                         "status": "ACCESS_DENIED"
                     }],
                     "jump_to": "end"
                 }

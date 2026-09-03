@@ -36,11 +36,13 @@ class ChatService:
             )
 
             answer = ""
+            status = None
             knowledgge_base_resp = None
             text_to_sql_resp = None
 
             if response:
                 answer = response["messages"][-1].text
+                status = response["messages"][-1].additional_kwargs.get('status', "")
                 knowledgge_base_resp = self.extract_tool(
                     messages=response["messages"],
                     tool_name="knowledge_base_search",
@@ -65,6 +67,7 @@ class ChatService:
             return {
                 "answer": answer,
                 "sources": sources,
+                "status": status,
                 "knowledgge_base_resp": knowledgge_base_resp,
                 "text_to_sql_resp": text_to_sql_resp,
             }

@@ -73,7 +73,8 @@ User request:
             return {
                 "messages": [{
                     "role": "assistant",
-                    "content": "Database modification operations are not allowed. Please rephrase your request to only include data retrieval."
+                    "content": "Database modification operations are not allowed. Please rephrase your request to only include data retrieval.",
+                    "status": "ACCESS_DENIED"
                 }],
                 "jump_to": "end"
             }

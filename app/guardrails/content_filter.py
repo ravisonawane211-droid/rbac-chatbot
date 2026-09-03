@@ -80,7 +80,8 @@ class ContentFilterMiddleware(AgentMiddleware):
                 return {
                     "messages": [{
                         "role": "assistant",
-                        "content": "This request violates system security policies. Please rephrase your request. "
+                        "content": "This request violates system security policies. Please rephrase your request. ",
+                         "status": "ACCESS_DENIED"
                     }],
                     "jump_to": "end"
                 }

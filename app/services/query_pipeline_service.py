@@ -49,8 +49,9 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
     )
 
     answer = result.get("answer", "")
-    knowledgge_base_resp = result.get("knowledgge_base_resp")
-    text_to_sql_resp = result.get("text_to_sql_resp")
+    status = result.get("status", "")
+    knowledgge_base_resp = result.get("knowledgge_base_resp", "")
+    text_to_sql_resp = result.get("text_to_sql_resp", "")
 
     sources: list = []
     if knowledgge_base_resp and knowledgge_base_resp.get('status') != 'ACCESS_DENIED' and knowledgge_base_resp.get("sources") is not None:
@@ -59,7 +60,7 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
         except (TypeError, ValueError):
             sources = knowledgge_base_resp.get("sources", [])
 
-    if text_to_sql_resp and text_to_sql_resp.get("results") is not None:
+    if text_to_sql_resp and text_to_sql_resp.get("results", "") is not None:
         sources.append({"page_content": text_to_sql_resp.get("results")})
 
     if query_cache_service and query_cache_service.enabled:
@@ -80,7 +81,7 @@ async def execute_query_pipeline(question: str, user_info: dict) -> tuple[str, l
             cache_result["row_count"] = text_to_sql_resp.get("row_count")
 
         ttl = settings.CACHE_TTL_RAG
-        if knowledgge_base_resp.get('status') != 'ACCESS_DENIED':
+        if status != 'ACCESS_DENIED' and knowledgge_base_resp.get('status', "") != 'ACCESS_DENIED':
             for cache_key in dict.fromkeys([query_cache_service.get_key(question, (roles[0] if roles else "general"))]):
                 query_cache_service.set(cache_key, cache_result, ttl=ttl, cache_type="rag")
 
