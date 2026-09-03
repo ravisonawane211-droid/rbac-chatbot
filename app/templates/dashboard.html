@@ -136,11 +136,10 @@
           const metric = group.metrics[name];
           if (!metric) return '<td>-</td>';
 
-          const status = String(metric.eval_status || 'red').trim().toLowerCase();
           const score = Number(metric.metric_value);
           const thresholdValue = getThreshold(name);
           const hasThreshold = Number.isFinite(score) && Number.isFinite(thresholdValue);
-          const isGreen = hasThreshold ? score >= thresholdValue : status === 'green';
+          const isGreen = hasThreshold ? score >= thresholdValue : false;
           const displayStatus = isGreen ? 'green' : 'red';
           const statusClass = isGreen ? 'text-success fw-semibold' : 'text-danger fw-semibold';
           return `<td class="${statusClass}" title="${escapeHtml(displayStatus)}">${escapeHtml(metric.metric_value ?? '-')}</td>`;
